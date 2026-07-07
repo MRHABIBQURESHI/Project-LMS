@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // Redirect to login if not authenticated
 if (!isset($_SESSION['user_id'])) {
@@ -36,6 +37,35 @@ try {
     
     $account_status = $current_user['account_status'];
     $faculty_id = $current_user['faculty_id'];
+
+    // --- ACTIVE EXAM STATE LOCKING MONITOR ---
+    if ($user_role === 'student' && $account_status === 'active') {
+        $check_attempt = $pdo->prepare("SELECT * FROM exam_attempts WHERE user_id = ? AND status = 'in_progress'");
+        $check_attempt->execute([$user_id]);
+        $active_attempt = $check_attempt->fetch();
+        
+        if ($active_attempt) {
+            // If they are accessing the page via GET or performing any post action that is NOT the exam submit
+            if ($_SERVER['REQUEST_METHOD'] === 'GET' || !isset($_POST['submit_exam_score'])) {
+                $pdo->beginTransaction();
+                
+                // Force fail attempt as violation
+                $update_attempt = $pdo->prepare("UPDATE exam_attempts SET status = 'force_submitted_violation', score = 0.00, violation_count = 2, end_time = CURRENT_TIMESTAMP WHERE id = ?");
+                $update_attempt->execute([$active_attempt['id']]);
+                
+                // Hard-lock user profile
+                $lock_user = $pdo->prepare("UPDATE users SET account_status = 'locked' WHERE id = ?");
+                $lock_user->execute([$user_id]);
+                
+                $pdo->commit();
+                
+                // Destroy active credentials session
+                session_destroy();
+                header("Location: login.php?error=Exam terminal exited. Your session was terminated at 0% and your account has been LOCKED.");
+                exit;
+            }
+        }
+    }
 } catch (PDOException $e) {
     die("Error fetching user data: " . $e->getMessage());
 }
@@ -122,9 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->beginTransaction();
                 
-                // Add exam attempt
-                $stmt = $pdo->prepare("INSERT INTO exam_attempts (user_id, exam_id, score, status, violation_count, end_time) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)");
-                $stmt->execute([$user_id, $exam_id, $score, $status, $violations]);
+                // Update active in_progress exam attempt instead of inserting a new duplicate row
+                $stmt = $pdo->prepare("UPDATE exam_attempts SET score = ?, status = ?, violation_count = ?, end_time = CURRENT_TIMESTAMP WHERE user_id = ? AND exam_id = ? AND status = 'in_progress'");
+                $stmt->execute([$score, $status, $violations, $user_id, $exam_id]);
                 
                 // If violation force submit, lock user account!
                 if ($status === 'force_submitted_violation') {
@@ -138,16 +168,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
                 
-                // Determine pass threshold
-                $ex_stmt = $pdo->prepare("SELECT pass_threshold, faculty_id FROM exams WHERE id = ?");
-                $ex_stmt->execute([$exam_id]);
-                $exam_data = $ex_stmt->fetch();
-                $pass_threshold = $exam_data ? intval($exam_data['pass_threshold']) : 70;
+                // Determine pass threshold (updated to 60.0% matching specification)
+                $pass_threshold = 60.00;
                 
                 if ($score >= $pass_threshold) {
                     // Generate verifiable certificate UID
                     $cert_uid = 'LIAB-' . strtoupper(substr(md5(uniqid()), 0, 8)) . '-' . $user_id;
-                    $pdf_mock_path = 'uploads/certificates/cert_' . $user_id . '_' . $exam_data['faculty_id'] . '.pdf';
+                    $pdf_mock_path = 'uploads/certificates/cert_' . $user_id . '_' . $exam_id . '.pdf';
                     
                     // Create certificate folder if not exists
                     if (!file_exists(__DIR__ . '/uploads/certificates')) {
@@ -166,6 +193,152 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->rollBack();
                 }
                 $error_msg = 'Database error recording exam: ' . $e->getMessage();
+            }
+        }
+
+        // 3. Start Timed Exam Session
+        if (isset($_POST['start_exam_attempt'])) {
+            $exam_id = intval($_POST['exam_id']);
+            try {
+                $pdo->beginTransaction();
+                // Close any orphan attempts
+                $clear_stmt = $pdo->prepare("UPDATE exam_attempts SET status = 'force_submitted_violation', score = 0.00, end_time = CURRENT_TIMESTAMP WHERE user_id = ? AND status = 'in_progress'");
+                $clear_stmt->execute([$user_id]);
+                
+                // Create active in_progress record
+                $stmt = $pdo->prepare("INSERT INTO exam_attempts (user_id, exam_id, score, status, violation_count, start_time) VALUES (?, ?, NULL, 'in_progress', 0, CURRENT_TIMESTAMP)");
+                $stmt->execute([$user_id, $exam_id]);
+                $pdo->commit();
+                
+                $success_msg = 'Exam terminal initialized. Monitoring active.';
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $error_msg = 'Error starting exam: ' . $e->getMessage();
+            }
+        }
+
+        // 4. Pay Exam Resit Fee (£150)
+        if (isset($_POST['pay_resit_fee'])) {
+            $card_holder = trim($_POST['card_holder'] ?? '');
+            $card_number = trim($_POST['card_number'] ?? '');
+            $card_exp = trim($_POST['card_exp'] ?? '');
+            $card_cvc = trim($_POST['card_cvc'] ?? '');
+            
+            $exp_parts = explode('/', str_replace(' ', '', $card_exp));
+            $exp_month = intval($exp_parts[0] ?? 0);
+            $exp_year = intval('20' . ($exp_parts[1] ?? 0));
+            
+            try {
+                $stripe_secret = getenv('STRIPE_SECRET_KEY');
+                if (empty($stripe_secret)) {
+                    throw new Exception("Stripe configurations missing in environment setup.");
+                }
+                
+                \Stripe\Stripe::setApiKey($stripe_secret);
+                
+                // Create payment method
+                $paymentMethod = \Stripe\PaymentMethod::create([
+                    'type' => 'card',
+                    'card' => [
+                        'number' => str_replace(' ', '', $card_number),
+                        'exp_month' => $exp_month,
+                        'exp_year' => $exp_year,
+                        'cvc' => $card_cvc,
+                    ],
+                ]);
+                
+                // Create and Confirm PaymentIntent
+                $intent = \Stripe\PaymentIntent::create([
+                    'amount' => 15000, // £150.00
+                    'currency' => 'gbp',
+                    'payment_method' => $paymentMethod->id,
+                    'confirm' => true,
+                    'automatic_payment_methods' => [
+                        'enabled' => true,
+                        'allow_redirects' => 'never'
+                    ]
+                ]);
+                
+                if ($intent->status === 'succeeded') {
+                    $tx_ref = $intent->id;
+                } else {
+                    throw new Exception("Stripe Payment incomplete: Status is " . $intent->status);
+                }
+                
+                $pdo->beginTransaction();
+                $pay_stmt = $pdo->prepare("INSERT INTO payments (user_id, type, method, amount, status, transaction_ref) VALUES (?, 'tuition', 'stripe', 150.00, 'paid', ?)");
+                $pay_stmt->execute([$user_id, $tx_ref]);
+                $pdo->commit();
+                $success_msg = 'Resit Fee of £150.00 processed successfully. Exam attempt eligibility unlocked.';
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $error_msg = 'Payment error: ' . $e->getMessage();
+            }
+        }
+
+        // 5. Pay Installment Fee (£749)
+        if (isset($_POST['pay_installment'])) {
+            $inst_num = intval($_POST['installment_number']);
+            $card_holder = trim($_POST['card_holder'] ?? '');
+            $card_number = trim($_POST['card_number'] ?? '');
+            $card_exp = trim($_POST['card_exp'] ?? '');
+            $card_cvc = trim($_POST['card_cvc'] ?? '');
+            
+            $exp_parts = explode('/', str_replace(' ', '', $card_exp));
+            $exp_month = intval($exp_parts[0] ?? 0);
+            $exp_year = intval('20' . ($exp_parts[1] ?? 0));
+            
+            try {
+                $stripe_secret = getenv('STRIPE_SECRET_KEY');
+                if (empty($stripe_secret)) {
+                    throw new Exception("Stripe configurations missing in environment setup.");
+                }
+                
+                \Stripe\Stripe::setApiKey($stripe_secret);
+                
+                // Create payment method
+                $paymentMethod = \Stripe\PaymentMethod::create([
+                    'type' => 'card',
+                    'card' => [
+                        'number' => str_replace(' ', '', $card_number),
+                        'exp_month' => $exp_month,
+                        'exp_year' => $exp_year,
+                        'cvc' => $card_cvc,
+                    ],
+                ]);
+                
+                // Create and Confirm PaymentIntent
+                $intent = \Stripe\PaymentIntent::create([
+                    'amount' => 74900, // £749.00
+                    'currency' => 'gbp',
+                    'payment_method' => $paymentMethod->id,
+                    'confirm' => true,
+                    'automatic_payment_methods' => [
+                        'enabled' => true,
+                        'allow_redirects' => 'never'
+                    ]
+                ]);
+                
+                if ($intent->status === 'succeeded') {
+                    $tx_ref = $intent->id;
+                } else {
+                    throw new Exception("Stripe Payment incomplete: Status is " . $intent->status);
+                }
+                
+                $pdo->beginTransaction();
+                $pay_stmt = $pdo->prepare("INSERT INTO payments (user_id, type, method, amount, installment_number, status, transaction_ref) VALUES (?, 'tuition', 'stripe', 749.00, ?, 'paid', ?)");
+                $pay_stmt->execute([$user_id, $inst_num, $tx_ref]);
+                $pdo->commit();
+                $success_msg = 'Installment ' . $inst_num . ' of 3 processed successfully.';
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $error_msg = 'Payment error: ' . $e->getMessage();
             }
         }
     }
@@ -278,11 +451,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([$full_name, $dob, $email, $whatsapp_number, $hash, $faculty_id, $rep_code, $status]);
                         $new_uid = $pdo->lastInsertId();
 
-                        // Create default enrollment
-                        $en_stmt = $pdo->prepare("INSERT INTO enrollments (user_id, course_id, progress, status) VALUES (?, ?, 0, 'active')");
-                        $en_stmt->execute([$new_uid, $faculty_id]);
-
                         $pdo->commit();
+
+                        // Send automated credentials email via Mailtrap Sandbox
+                        require_once __DIR__ . '/mail_helper.php';
+                        $email_subject = "Welcome to UK London International Award Board - Portal Access";
+                        $email_body = "Dear $full_name,\n\nYour student account has been created by the administrator.\n\nLogin Credentials:\nURL: http://127.0.0.1:8000/login.php\nEmail: $email\nPassword: $gen_pass\n\nSincerely,\nUK London International Award Board Assessor Services";
+                        sendMailtrapEmail($email, $email_subject, $email_body);
 
                         $success_msg = "Student created successfully!<br><strong>Email:</strong> <code>" . htmlspecialchars($email) . "</code><br><strong>Generated Password:</strong> <code>" . htmlspecialchars($gen_pass) . "</code>";
                     }
@@ -336,6 +511,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success_msg = 'Student profile and credentials deleted successfully.';
             } catch (PDOException $e) {
                 $error_msg = 'Database error deleting student: ' . $e->getMessage();
+            }
+        }
+
+        // 7. Revoke Certificate Registry Record
+        if (isset($_POST['revoke_certificate'])) {
+            $cert_id = intval($_POST['cert_id']);
+            try {
+                $stmt = $pdo->prepare("UPDATE certificates SET verification_status = 'revoked' WHERE id = ?");
+                $stmt->execute([$cert_id]);
+                $success_msg = 'Student certificate reference has been REVOKED and flagged publically.';
+            } catch (PDOException $e) {
+                $error_msg = 'Database error revoking certificate: ' . $e->getMessage();
+            }
+        }
+
+        // 8. Re-Approve Certificate Registry Record
+        if (isset($_POST['approve_certificate'])) {
+            $cert_id = intval($_POST['cert_id']);
+            try {
+                $stmt = $pdo->prepare("UPDATE certificates SET verification_status = 'approved' WHERE id = ?");
+                $stmt->execute([$cert_id]);
+                $success_msg = 'Student certificate reference has been RE-APPROVED and validated.';
+            } catch (PDOException $e) {
+                $error_msg = 'Database error approving certificate: ' . $e->getMessage();
             }
         }
     }
@@ -452,6 +651,36 @@ if ($user_role === 'student' && $account_status === 'active') {
         $pay_stmt->execute([$user_id]);
         $payments_history = $pay_stmt->fetchAll();
 
+        // --- NEW CALCULATED BLOCKS FOR TUITION PAYWALL & RESIT PAYWALL ---
+        $installments_paid = 0;
+        $is_installment_plan = false;
+        foreach ($payments_history as $p) {
+            if ($p['type'] === 'tuition' && $p['status'] === 'paid') {
+                if (floatval($p['amount']) == 749.00) {
+                    $is_installment_plan = true;
+                    $installments_paid++;
+                } elseif (floatval($p['amount']) == 2249.00) {
+                    $is_installment_plan = false;
+                }
+            }
+        }
+        
+        $exam_failed = false;
+        $resit_unlocked = true;
+        if (!empty($exam_results)) {
+            $latest_attempt = end($exam_results);
+            if ($latest_attempt['score'] < 60 || $latest_attempt['status'] === 'force_submitted_violation') {
+                $exam_failed = true;
+                $resit_unlocked = false;
+                foreach ($payments_history as $p) {
+                    if ($p['type'] === 'tuition' && $p['status'] === 'paid' && floatval($p['amount']) == 150.00 && strtotime($p['created_at']) > strtotime($latest_attempt['end_time'])) {
+                        $resit_unlocked = true;
+                        break;
+                    }
+                }
+            }
+        }
+
     } catch (PDOException $e) {
         $error_msg = 'Error fetching student data: ' . $e->getMessage();
     }
@@ -463,6 +692,8 @@ $pending_remittance = [];
 $affiliate_applications = [];
 $certificate_registry = [];
 $students_list = [];
+$all_exam_attempts = [];
+$all_certificates = [];
 
 if ($user_role === 'admin') {
     try {
@@ -541,6 +772,28 @@ if ($user_role === 'admin') {
             }
         }
 
+        // Fetch all exam attempts for exams_report page
+        if ($page === 'exams_report') {
+            $all_exam_attempts = $pdo->query("
+                SELECT ea.*, u.full_name as student_name, f.name as faculty_name
+                FROM exam_attempts ea
+                JOIN users u ON ea.user_id = u.id
+                LEFT JOIN faculties f ON u.faculty_id = f.id
+                ORDER BY ea.id DESC
+            ")->fetchAll();
+        }
+
+        // Fetch all certificates for certificates_registry page
+        if ($page === 'certificates_registry') {
+            $all_certificates = $pdo->query("
+                SELECT cert.*, u.full_name as student_name, f.name as faculty_name
+                FROM certificates cert
+                JOIN users u ON cert.user_id = u.id
+                LEFT JOIN faculties f ON u.faculty_id = f.id
+                ORDER BY cert.id DESC
+            ")->fetchAll();
+        }
+
     } catch (PDOException $e) {
         $error_msg = 'Error fetching admin records: ' . $e->getMessage();
     }
@@ -560,7 +813,21 @@ if ($user_role === 'admin') {
     </script>
     
     <!-- ANTI-CHEAT ENGINE (FOR STUDENT TIMED EXAMS) -->
-    <?php if ($user_role === 'student' && $account_status === 'active' && $active_exam): ?>
+    <?php if ($user_role === 'student' && $account_status === 'active' && $active_exam): 
+        // Check if there is an in_progress attempt
+        $check_term = $pdo->prepare("SELECT id, start_time FROM exam_attempts WHERE user_id = ? AND exam_id = ? AND status = 'in_progress'");
+        $check_term->execute([$user_id, $active_exam['id']]);
+        $has_active_term = $check_term->fetch();
+        
+        $seconds_left = ($active_exam['duration_minutes'] ?: 120) * 60;
+        if ($has_active_term) {
+            $elapsed = time() - strtotime($has_active_term['start_time']);
+            $seconds_left = (($active_exam['duration_minutes'] ?: 120) * 60) - $elapsed;
+            if ($seconds_left <= 0) {
+                $seconds_left = 0;
+            }
+        }
+    ?>
     <style>
         .exam-terminal-overlay {
             display: none;
@@ -590,9 +857,19 @@ if ($user_role === 'admin') {
     </style>
     <script>
         var examTimer;
-        var secondsLeft = <?php echo ($active_exam['duration_minutes'] ?: 120) * 60; ?>;
+        var secondsLeft = <?php echo $seconds_left; ?>;
         var violationsCount = 0;
         var examActive = false;
+
+        window.addEventListener('DOMContentLoaded', (event) => {
+            <?php if ($has_active_term): ?>
+                if (secondsLeft <= 0) {
+                    forceSubmitExam('timeout');
+                } else {
+                    startExamEngine();
+                }
+            <?php endif; ?>
+        });
 
         function startExamEngine() {
             examActive = true;
@@ -659,15 +936,51 @@ if ($user_role === 'admin') {
             } else if (reason === 'timeout') {
                 alert('Time expired. Submitting assessment.');
                 document.getElementById('violations_field').value = violationsCount;
-                document.getElementById('exam_score_field').value = Math.floor(Math.random() * 40) + 30;
+                // Auto timeout yields 0.00 score
+                document.getElementById('exam_score_field').value = '0.00';
                 document.getElementById('examForm').submit();
             }
         }
 
         function finishExamNormal() {
+            var correctAnswers = {
+                'business': ['B', 'B', 'B'],
+                'health': ['B', 'B', 'B'],
+                'nutrition': ['A', 'B', 'B']
+            };
+            var faculty = '<?php echo strtolower($enrollment ? ($enrollment['name'] ?? "") : ""); ?>';
+            var correctCount = 0;
+            var total = 3;
+            
+            for (var i = 1; i <= total; i++) {
+                var radios = document.getElementsByName('q' + i);
+                var answered = false;
+                for (var r = 0; r < radios.length; r++) {
+                    if (radios[r].checked) {
+                        answered = true;
+                        if (radios[r].value === correctAnswers[faculty][i-1]) {
+                            correctCount++;
+                        }
+                        break;
+                    }
+                }
+                if (!answered) {
+                    alert('Please answer Question ' + i + ' before submitting your paper.');
+                    return;
+                }
+            }
+            
+            var calculatedScore = (correctCount / total) * 100;
+            
             examActive = false;
             clearInterval(examTimer);
-            document.getElementById('exam_score_field').value = '85.00';
+            
+            document.removeEventListener('visibilitychange', handleCheatViolation);
+            window.removeEventListener('blur', handleCheatViolation);
+            document.removeEventListener('contextmenu', preventDefaultAction);
+            document.removeEventListener('keydown', handleKeyBlock);
+            
+            document.getElementById('exam_score_field').value = calculatedScore.toFixed(2);
             document.getElementById('violations_field').value = violationsCount;
             document.getElementById('examForm').submit();
         }
@@ -689,14 +1002,17 @@ if ($user_role === 'admin') {
             
             <ul class="db-nav-menu">
                 <li class="db-nav-section-title">Academic Portal</li>
-                <li class="db-nav-item <?php echo ($user_role === 'student' || $page === 'dashboard') ? 'active' : ''; ?>"><a href="dashboard.php">Dashboard</a></li>
+                <li class="db-nav-item <?php echo ($page === 'dashboard' || empty($page)) ? 'active' : ''; ?>"><a href="dashboard.php?page=dashboard">Overview</a></li>
                 
                 <?php if ($user_role === 'student' && $account_status === 'active'): ?>
-                    <li class="db-nav-item"><a href="#modulesSection">My Coursework</a></li>
-                    <li class="db-nav-item"><a href="#examsSection">Timed Exams</a></li>
-                    <li class="db-nav-item"><a href="#certsSection">Certificates</a></li>
+                    <li class="db-nav-item <?php echo $page === 'coursework' ? 'active' : ''; ?>"><a href="dashboard.php?page=coursework">My Coursework</a></li>
+                    <li class="db-nav-item <?php echo $page === 'exams' ? 'active' : ''; ?>"><a href="dashboard.php?page=exams">Timed Exams</a></li>
+                    <li class="db-nav-item <?php echo $page === 'certificates' ? 'active' : ''; ?>"><a href="dashboard.php?page=certificates">Certificates</a></li>
+                    <li class="db-nav-item <?php echo $page === 'payments' ? 'active' : ''; ?>"><a href="dashboard.php?page=payments">Tuition Payments</a></li>
                 <?php elseif ($user_role === 'admin'): ?>
-                    <li class="db-nav-item <?php echo $page === 'students' ? 'active' : ''; ?>"><a href="dashboard.php?page=students">Students</a></li>
+                    <li class="db-nav-item <?php echo $page === 'students' ? 'active' : ''; ?>"><a href="dashboard.php?page=students">Students Registry</a></li>
+                    <li class="db-nav-item <?php echo $page === 'exams_report' ? 'active' : ''; ?>"><a href="dashboard.php?page=exams_report">Exam Reports</a></li>
+                    <li class="db-nav-item <?php echo $page === 'certificates_registry' ? 'active' : ''; ?>"><a href="dashboard.php?page=certificates_registry">Certificates Ledger</a></li>
                 <?php endif; ?>
                 
                 <li class="db-nav-section-title">Account</li>
@@ -841,177 +1157,284 @@ if ($user_role === 'admin') {
                 <!-- ====================================================================== -->
                 <?php elseif ($user_role === 'student'): ?>
                     
-                    <!-- Metrics grid -->
-                    <div class="db-stat-grid">
-                        <div class="db-stat-card">
-                            <div class="db-stat-icon">📚</div>
-                            <div class="db-stat-info">
-                                <div class="db-stat-value"><?php echo count($modules); ?></div>
-                                <div class="db-stat-label">Total Modules</div>
+                    <?php if ($page === 'dashboard' || empty($page)): ?>
+                        <!-- Metrics grid -->
+                        <div class="db-stat-grid">
+                            <div class="db-stat-card">
+                                <div class="db-stat-icon">📚</div>
+                                <div class="db-stat-info">
+                                    <div class="db-stat-value"><?php echo count($modules); ?></div>
+                                    <div class="db-stat-label">Total Modules</div>
+                                </div>
+                            </div>
+                            <div class="db-stat-card">
+                                <div class="db-stat-icon">📝</div>
+                                <div class="db-stat-info">
+                                    <div class="db-stat-value"><?php echo count($assignments_uploaded); ?></div>
+                                    <div class="db-stat-label">Coursework Uploads</div>
+                                </div>
+                            </div>
+                            <div class="db-stat-card">
+                                <div class="db-stat-icon">⏱️</div>
+                                <div class="db-stat-info">
+                                    <div class="db-stat-value"><?php echo count($exam_results) > 0 ? end($exam_results)['score'] . '%' : 'No Attempt'; ?></div>
+                                    <div class="db-stat-label">Exam Score</div>
+                                </div>
+                            </div>
+                            <div class="db-stat-card">
+                                <div class="db-stat-icon">🏆</div>
+                                <div class="db-stat-info">
+                                    <div class="db-stat-value"><?php echo count($certificates); ?></div>
+                                    <div class="db-stat-label">Certificates Issued</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="db-stat-card">
-                            <div class="db-stat-icon">📝</div>
-                            <div class="db-stat-info">
-                                <div class="db-stat-value"><?php echo count($assignments_uploaded); ?></div>
-                                <div class="db-stat-label">Coursework Uploads</div>
-                            </div>
-                        </div>
-                        <div class="db-stat-card">
-                            <div class="db-stat-icon">⏱️</div>
-                            <div class="db-stat-info">
-                                <div class="db-stat-value"><?php echo count($exam_results) > 0 ? end($exam_results)['score'] . '%' : 'No Attempt'; ?></div>
-                                <div class="db-stat-label">Exam Score</div>
-                            </div>
-                        </div>
-                        <div class="db-stat-card">
-                            <div class="db-stat-icon">🏆</div>
-                            <div class="db-stat-info">
-                                <div class="db-stat-value"><?php echo count($certificates); ?></div>
-                                <div class="db-stat-label">Certificates Issued</div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="gov-grid-row">
-                        <!-- Left Columns (Modules, Exams, Certificates) -->
-                        <div class="gov-grid-column-two-thirds">
-                            
-                            <!-- Enrollment card -->
-                            <div class="db-card">
-                                <div class="db-card-title">Enrolled Academic Program</div>
-                                <p style="font-size:16px; font-weight:600; color:#002F6C; margin-bottom: 5px;">Faculty of <?php echo htmlspecialchars($enrollment['name']); ?></p>
-                                <p class="gov-hint" style="margin-bottom:0;">Registered Student ID: LIAB-ST-<?php echo $user_id; ?></p>
-                            </div>
+                        <div class="gov-grid-row">
+                            <div class="gov-grid-column-two-thirds">
+                                <!-- Enrollment card -->
+                                <div class="db-card">
+                                    <div class="db-card-title">Enrolled Academic Program</div>
+                                    <p style="font-size:16px; font-weight:600; color:#002F6C; margin-bottom: 5px;">Faculty of <?php echo htmlspecialchars($enrollment ? $enrollment['name'] : "Not Assigned"); ?></p>
+                                    <p class="gov-hint" style="margin-bottom:15px;">Registered Student ID: LIAB-ST-<?php echo $user_id; ?></p>
+                                    <p style="font-size:14px; line-height:1.5; margin-bottom: 10px;">Welcome to your academic terminal! Please use the left-hand navigation links to access your coursework modules, launch the timed exams terminal, download your certificates, or check your billing transaction logs.</p>
+                                </div>
 
-                            <!-- Course Modules card -->
-                            <div class="db-card" id="modulesSection">
-                                <div class="db-card-title">Coursework Modules & Submissions</div>
-                                <p style="font-size:14px; margin-bottom: 20px;">Complete modules 1 & 2 (universal) and modules 3 & 4 (faculty-specific). Upload coursework files here (Max 25MB, PDF/DOCX/JPG/PNG).</p>
-
-                                <div class="gov-list-group" style="margin-top: 10px;">
-                                    <?php foreach ($modules as $mod): ?>
-                                        <div class="gov-list-row" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 20px 0;">
-                                            <div style="display:flex; justify-content:space-between; width:100%;">
-                                                <span class="gov-list-key">Module <?php echo $mod['module_number']; ?>: <?php echo htmlspecialchars($mod['title']); ?></span>
-                                                <div>
-                                                    <?php if ($mod['faculty_id'] === NULL): ?>
-                                                        <span class="gov-tag gov-tag-grey" style="font-size:10px;">Universal</span>
-                                                    <?php else: ?>
-                                                        <span class="gov-tag" style="font-size:10px;">Faculty Focus</span>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </div>
-
-                                            <p style="font-size: 14px; margin-bottom:5px; color:#555;"><?php echo htmlspecialchars($mod['content_path']); ?></p>
-
-                                            <?php if (isset($assignments_uploaded[$mod['id']])): ?>
-                                                <?php $sub = $assignments_uploaded[$mod['id']]; ?>
-                                                <div style="font-size: 13px; background-color:#fafbfe; padding:10px; width:100%; border-left: 3px solid #002F6C; border-radius: 4px;">
-                                                    Uploaded Document: <a href="<?php echo htmlspecialchars($sub['file_path']); ?>" target="_blank"><?php echo basename($sub['file_path']); ?></a> (<?php echo $sub['file_size']; ?>)<br>
-                                                    Status: <strong><?php echo strtoupper($sub['status']); ?></strong> 
-                                                    <?php if ($sub['status'] === 'reviewed'): ?>
-                                                        | Grade: <strong style="color:#00703c;"><?php echo htmlspecialchars($sub['grade']); ?></strong>
-                                                    <?php endif; ?>
-                                                    <?php if (!empty($sub['feedback'])): ?>
-                                                        <br><strong>Feedback:</strong> <em><?php echo htmlspecialchars($sub['feedback']); ?></em>
-                                                    <?php endif; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="gov-tag gov-tag-grey" style="font-size: 10px;">Awaiting Submission</span>
-                                            <?php endif; ?>
-
-                                            <!-- Upload form -->
-                                            <form action="dashboard.php" method="POST" enctype="multipart/form-data" style="display:flex; align-items:center; gap: 15px; width:100%; margin-top: 8px;">
-                                                <input type="hidden" name="module_id" value="<?php echo $mod['id']; ?>">
-                                                <input type="file" name="assignment_file" required style="font-size:13px;">
-                                                <button type="submit" name="upload_assignment" class="gov-button" style="font-size:12px; padding: 6px 12px; border-radius: 4px;">Upload Assignment</button>
-                                            </form>
-                                        </div>
-                                    <?php endforeach; ?>
+                                <div class="db-card">
+                                    <div class="db-card-title">Portal Quick Start Guide</div>
+                                    <ul style="font-size:14px; line-height:1.8; color:var(--text-primary); margin-left:20px; list-style-type: disc;">
+                                        <li><strong>Coursework:</strong> Review the universal and faculty coursework modules, and submit your homework assignments for evaluation.</li>
+                                        <li><strong>Timed Exam:</strong> Once you are ready, start your comprehensive timed assessment exam (2-hour limit). Ensure you maintain window focus, as switching tabs will trigger security lockouts.</li>
+                                        <li><strong>Certificate:</strong> A Gold Crest verifiable diploma certificate is generated automatically upon passing the final assessment with a grade of 60% or higher.</li>
+                                    </ul>
                                 </div>
                             </div>
 
-                            <!-- Exams card -->
-                            <div class="db-card" id="examsSection">
-                                <div class="db-card-title">Faculty Timed Assessment</div>
-                                <p style="font-size: 14px; margin-bottom: 20px;">Complete your timed examination. Anti-cheat visibility tracking metrics are active.</p>
+                            <div class="gov-grid-column-one-third" style="border-left: 1px solid #EBF3FC; padding-left: 20px;">
+                                <div class="db-card">
+                                    <div class="db-card-title" style="font-size: 16px;">Representative Rep Code</div>
+                                    <p style="font-size:13px; color:#555;">Linked Affiliate Consultant:</p>
+                                    <div style="background-color:#f6f8fa; padding:10px; border-radius:4px; font-size:13px; font-weight:600; margin-top:8px; display:inline-block;">
+                                        <?php echo htmlspecialchars($current_user['rep_code'] ?: 'Independent Direct Signup'); ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                                <div class="gov-list-group" style="margin-top: 10px; margin-bottom: 0;">
-                                    <?php if (!$active_exam): ?>
-                                        <p class="gov-hint">No examinations configured for this faculty.</p>
-                                    <?php else: ?>
-                                        <div class="gov-list-row" style="padding: 15px 0; border-bottom: none;">
+                    <?php elseif ($page === 'coursework'): ?>
+                        <!-- Course Modules card -->
+                        <div class="db-card" id="modulesSection">
+                            <div class="db-card-title">Coursework Modules & Submissions</div>
+                            <p style="font-size:14px; margin-bottom: 20px;">Complete modules 1 & 2 (universal) and modules 3 & 4 (faculty-specific). Upload coursework files here (Max 25MB, PDF/DOCX/JPG/PNG).</p>
+
+                            <div class="gov-list-group" style="margin-top: 10px;">
+                                <?php foreach ($modules as $mod): ?>
+                                    <div class="gov-list-row" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 20px 0;">
+                                        <div style="display:flex; justify-content:space-between; width:100%;">
+                                            <span class="gov-list-key">Module <?php echo $mod['module_number']; ?>: <?php echo htmlspecialchars($mod['title']); ?></span>
+                                            <div>
+                                                <?php if ($mod['faculty_id'] === NULL): ?>
+                                                    <span class="gov-tag gov-tag-grey" style="font-size:10px;">Universal</span>
+                                                <?php else: ?>
+                                                    <span class="gov-tag" style="font-size:10px;">Faculty Focus</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <p style="font-size: 14px; margin-bottom:5px; color:#555;"><?php echo htmlspecialchars($mod['content_path']); ?></p>
+
+                                        <?php if (isset($assignments_uploaded[$mod['id']])): ?>
+                                            <?php $sub = $assignments_uploaded[$mod['id']]; ?>
+                                            <div style="font-size: 13px; background-color:#fafbfe; padding:10px; width:100%; border-left: 3px solid #002F6C; border-radius: 4px;">
+                                                Uploaded Document: <a href="<?php echo htmlspecialchars($sub['file_path']); ?>" target="_blank"><?php echo basename($sub['file_path']); ?></a> (<?php echo $sub['file_size']; ?>)<br>
+                                                Status: <strong><?php echo strtoupper($sub['status']); ?></strong> 
+                                                <?php if ($sub['status'] === 'reviewed'): ?>
+                                                    | Grade: <strong style="color:#00703c;"><?php echo htmlspecialchars($sub['grade']); ?></strong>
+                                                <?php endif; ?>
+                                                <?php if (!empty($sub['feedback'])): ?>
+                                                    <br><strong>Feedback:</strong> <em><?php echo htmlspecialchars($sub['feedback']); ?></em>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <span class="gov-tag gov-tag-grey" style="font-size: 10px;">Awaiting Submission</span>
+                                        <?php endif; ?>
+
+                                        <!-- Upload form -->
+                                        <form action="dashboard.php?page=coursework" method="POST" enctype="multipart/form-data" style="display:flex; align-items:center; gap: 15px; width:100%; margin-top: 8px;">
+                                            <input type="hidden" name="module_id" value="<?php echo $mod['id']; ?>">
+                                            <input type="file" name="assignment_file" required style="font-size:13px;">
+                                            <button type="submit" name="upload_assignment" class="gov-button" style="font-size:12px; padding: 6px 12px; border-radius: 4px;">Upload Assignment</button>
+                                        </form>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                    <?php elseif ($page === 'exams'): ?>
+                        <!-- Exams card -->
+                        <div class="db-card" id="examsSection">
+                            <div class="db-card-title">Faculty Timed Assessment</div>
+                            <p style="font-size: 14px; margin-bottom: 20px;">Complete your timed examination. Anti-cheat visibility tracking metrics are active. Minimum passing grade is 60%.</p>
+
+                            <div class="gov-list-group" style="margin-top: 10px; margin-bottom: 0;">
+                                <?php if (!$active_exam): ?>
+                                    <p class="gov-hint">No examinations configured for this faculty.</p>
+                                <?php else: ?>
+                                    <div class="gov-list-row" style="padding: 15px 0; border-bottom: none; flex-direction:column; align-items:flex-start; gap:12px;">
+                                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
                                             <div>
                                                 <span class="gov-list-key">Timed Comprehensive Assessment</span>
-                                                <span class="gov-hint" style="margin-top: 5px;">Pass Threshold: <?php echo $active_exam['pass_threshold']; ?>% | Duration: <?php echo $active_exam['duration_minutes']; ?> mins</span>
+                                                <span class="gov-hint" style="margin-top: 5px;">Pass Threshold: 60% | Duration: <?php echo $active_exam['duration_minutes']; ?> mins</span>
                                             </div>
                                             <div>
                                                 <?php if (!empty($exam_results)): ?>
                                                     <?php $latest_attempt = end($exam_results); ?>
-                                                    <span class="gov-tag <?php echo $latest_attempt['score'] >= $active_exam['pass_threshold'] ? 'gov-tag-green' : 'gov-tag-yellow'; ?>">
+                                                    <span class="gov-tag <?php echo $latest_attempt['score'] >= 60 ? 'gov-tag-green' : 'gov-tag-yellow'; ?>">
                                                         Score: <?php echo $latest_attempt['score']; ?>% (<?php echo strtoupper($latest_attempt['status']); ?>)
                                                     </span>
-                                                    <?php if ($latest_attempt['score'] < $active_exam['pass_threshold']): ?>
-                                                        <button onclick="startExamEngine()" class="gov-button" style="font-size:12px; padding: 6px 12px; border-radius: 4px; margin-left:10px;">Retake Exam</button>
-                                                    <?php endif; ?>
                                                 <?php else: ?>
-                                                    <button onclick="startExamEngine()" class="gov-button" style="font-size:12px; padding: 6px 12px; border-radius: 4px;">Start Assessment</button>
+                                                    <span class="gov-tag gov-tag-grey" style="text-transform:none;">No Attempts Completed</span>
                                                 <?php endif; ?>
                                             </div>
+                                        </div>
+
+                                        <div style="width:100%; margin-top: 10px;">
+                                            <?php if ($exam_failed): ?>
+                                                <?php if ($resit_unlocked): ?>
+                                                    <div style="margin-bottom:12px; font-size:13px; color:#00703c; font-weight:600;">✓ Exam Resit eligibility unlocked. Ready to start attempt.</div>
+                                                    <form action="dashboard.php?page=exams" method="POST" style="display:inline;">
+                                                        <input type="hidden" name="start_exam_attempt" value="1">
+                                                        <input type="hidden" name="exam_id" value="<?php echo $active_exam['id']; ?>">
+                                                        <button type="submit" class="gov-button" style="font-size:12px; padding: 8px 16px; border-radius: 4px;">Retake Assessment Now</button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <!-- Render Resit Paywall Form -->
+                                                    <div style="background-color: #fafbfe; padding: 20px; border-left: 5px solid #d4351c; border-radius: 4px; width:100%;">
+                                                        <h3 style="color:#d4351c; margin-bottom:8px; font-size:14px;">Assessment Resit Paywall</h3>
+                                                        <p style="font-size:12px; color:#555; margin-bottom:15px; line-height:1.45;">You did not achieve the required passing threshold of 60% on your exam attempt. To reactivate the assessment terminal and try again, you must process the Board Resit Fee of <strong>£150.00</strong>.</p>
+                                                        
+                                                        <form action="dashboard.php?page=exams" method="POST" style="max-width:360px;">
+                                                            <input type="hidden" name="pay_resit_fee" value="1">
+                                                            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                                                                <input class="gov-input" type="text" name="card_holder" placeholder="Cardholder Name" required style="font-size:11px; padding:6px; border:1px solid #ccc; max-width:100%;">
+                                                                <input class="gov-input" type="text" name="card_number" placeholder="Card Number" required style="font-size:11px; padding:6px; border:1px solid #ccc; max-width:100%;">
+                                                                <div style="display:flex; gap:6px;">
+                                                                    <input class="gov-input" type="text" name="card_exp" placeholder="MM/YY" required style="font-size:11px; padding:6px; border:1px solid #ccc; width:60%; max-width:100%;">
+                                                                    <input class="gov-input" type="text" name="card_cvc" placeholder="CVC" required style="font-size:11px; padding:6px; border:1px solid #ccc; width:40%; max-width:100%;">
+                                                                </div>
+                                                            </div>
+                                                            <button type="submit" class="gov-button" style="font-size:11px; padding: 8px 16px; border-radius: 4px; background-color:#00703c; border-bottom:none;">Pay £150 Resit Fee</button>
+                                                        </form>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <!-- First attempt button -->
+                                                <form action="dashboard.php?page=exams" method="POST" style="display:inline;">
+                                                    <input type="hidden" name="start_exam_attempt" value="1">
+                                                    <input type="hidden" name="exam_id" value="<?php echo $active_exam['id']; ?>">
+                                                    <button type="submit" class="gov-button" style="font-size:12px; padding: 8px 16px; border-radius: 4px;">Start Assessment Now</button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                    <?php elseif ($page === 'certificates'): ?>
+                        <!-- Certificate card -->
+                        <div class="db-card" id="certsSection">
+                            <div class="db-card-title">Verifiable Issued Certificate Credentials</div>
+                            <div class="gov-list-group" style="margin-top: 10px; margin-bottom: 0;">
+                                <?php if (empty($certificates)): ?>
+                                    <p class="gov-hint" style="padding: 10px 0;">No certificates issued yet. Pass your exam with 60% or more to unlock.</p>
+                                <?php else: ?>
+                                    <?php foreach ($certificates as $c): ?>
+                                        <div class="gov-list-row" style="padding: 15px 0;">
+                                            <div>
+                                                <span class="gov-list-key">Faculty Diploma Certificate</span>
+                                                <span class="gov-hint" style="margin-top: 5px;">UID Reference: <code><?php echo htmlspecialchars($c['certificate_uid']); ?></code> | Issued: <?php echo $c['issue_date']; ?></span>
+                                            </div>
+                                            <div style="display:flex; gap:10px;">
+                                                <a href="certificate.php?uid=<?php echo urlencode($c['certificate_uid']); ?>" target="_blank" class="gov-button" style="font-size:12px; padding: 6px 12px; border-radius: 4px; text-decoration:none;">View & Print</a>
+                                                <a href="<?php echo htmlspecialchars($c['pdf_path']); ?>" download class="gov-button gov-button-secondary" style="font-size:12px; padding: 6px 12px; border-radius: 4px; text-decoration:none;">Download PDF</a>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                    <?php elseif ($page === 'payments'): ?>
+                        <!-- Payment history -->
+                        <div class="db-card">
+                            <div class="db-card-title" style="font-size: 18px; margin-bottom: 15px;">Tuition Payment History & Status</div>
+                            
+                            <div class="gov-grid-row">
+                                <div class="gov-grid-column-two-thirds">
+                                    <div style="background-color: #fafbfe; padding: 20px; border: 1.5px solid #EBF3FC; border-radius: 8px; margin-bottom:15px;">
+                                        <?php if (empty($payments_history)): ?>
+                                            <span class="gov-hint">No transactions registered.</span>
+                                        <?php else: ?>
+                                            <table class="gov-table" style="margin:0;">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Billing Ref</th>
+                                                        <th>Amount</th>
+                                                        <th>Provider</th>
+                                                        <th>Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($payments_history as $p): ?>
+                                                        <tr>
+                                                            <td><code><?php echo htmlspecialchars($p['transaction_ref'] ?: 'Pending Review'); ?></code></td>
+                                                            <td><strong>£<?php echo number_format($p['amount'], 2); ?></strong></td>
+                                                            <td><?php echo strtoupper($p['method']); ?></td>
+                                                            <td>
+                                                                <span class="gov-tag <?php echo $p['status'] === 'paid' ? 'gov-tag-green' : 'gov-tag-yellow'; ?>" style="font-size:10px; padding:3px 8px; text-transform:none;">
+                                                                    <?php echo $p['status']; ?>
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="gov-grid-column-one-third">
+                                    <?php if ($is_installment_plan && $installments_paid < 3): ?>
+                                        <div style="background-color: #fafcff; padding: 20px; border: 1.5px solid #002F6C; border-radius: 8px;">
+                                            <div style="font-size:14px; font-weight:600; color:#002F6C; margin-bottom:8px;">Installment Tuition Status</div>
+                                            <p style="font-size:13px; margin-bottom:15px; color:#555; line-height:1.45;">Paid: <?php echo $installments_paid; ?> of 3 installments.<br>Remaining balance: <strong>£<?php echo (3 - $installments_paid) * 749; ?>.00</strong></p>
+                                            
+                                            <form action="dashboard.php?page=payments" method="POST">
+                                                <input type="hidden" name="pay_installment" value="1">
+                                                <input type="hidden" name="installment_number" value="<?php echo $installments_paid + 1; ?>">
+                                                
+                                                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                                                    <input type="text" name="card_holder" placeholder="Cardholder Name" required style="width:100%; font-size:12px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                                    <input type="text" name="card_number" placeholder="Card Number" required style="width:100%; font-size:12px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                                    <div style="display:flex; gap:6px;">
+                                                        <input type="text" name="card_exp" placeholder="MM/YY" required style="width:60%; font-size:12px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                                        <input type="text" name="card_cvc" placeholder="CVC" required style="width:40%; font-size:12px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                                    </div>
+                                                </div>
+                                                <button type="submit" class="gov-button" style="width:100%; font-size:12px; padding:10px; border-radius:4px;">Pay Installment <?php echo $installments_paid + 1; ?> (£749.00)</button>
+                                            </form>
+                                        </div>
+                                    <?php else: ?>
+                                        <div style="background-color: #fafcff; padding: 20px; border: 1.5px solid #00703c; border-radius: 8px; font-size:13px; color:#00703c; font-weight:600;">
+                                            ✓ All program tuition fee parameters are paid in full. No outstanding balance.
                                         </div>
                                     <?php endif; ?>
                                 </div>
                             </div>
-
-                            <!-- Certificate card -->
-                            <div class="db-card" id="certsSection">
-                                <div class="db-card-title">Verifiable Issued Certificate Credentials</div>
-                                <div class="gov-list-group" style="margin-top: 10px; margin-bottom: 0;">
-                                    <?php if (empty($certificates)): ?>
-                                        <p class="gov-hint" style="padding: 10px 0;">No certificates issued yet. Pass your exam with 70% or more to unlock.</p>
-                                    <?php else: ?>
-                                        <?php foreach ($certificates as $c): ?>
-                                            <div class="gov-list-row" style="padding: 15px 0;">
-                                                <div>
-                                                    <span class="gov-list-key">Faculty Diploma Certificate</span>
-                                                    <span class="gov-hint" style="margin-top: 5px;">UID Reference: <code><?php echo htmlspecialchars($c['certificate_uid']); ?></code> | Issued: <?php echo $c['issue_date']; ?></span>
-                                                </div>
-                                                <div>
-                                                    <a href="<?php echo htmlspecialchars($c['pdf_path']); ?>" download class="gov-button" style="font-size:12px; padding: 6px 12px; border-radius: 4px; text-decoration:none;">Download PDF</a>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-
                         </div>
 
-                        <!-- Right Sidebar Column (Payment history) -->
-                        <div class="gov-grid-column-one-third" style="border-left: 1px solid #EBF3FC; padding-left: 20px;">
-                            <div class="db-card">
-                                <div class="db-card-title" style="font-size: 16px; margin-bottom: 12px;">Tuition Payment History</div>
-                                <div style="background-color: #fafbfe; padding: 15px; border: 1.5px solid #EBF3FC; border-radius: 8px;">
-                                    <?php if (empty($payments_history)): ?>
-                                        <span class="gov-hint">No transactions registered.</span>
-                                    <?php else: ?>
-                                        <?php foreach ($payments_history as $p): ?>
-                                            <div style="font-size:13px; padding: 8px 0; border-bottom: 1px solid #EBF3FC; line-height: 1.4;">
-                                                Amount: <strong>$<?php echo $p['amount']; ?></strong><br>
-                                                Provider: <?php echo strtoupper($p['method']); ?><br>
-                                                Status: 
-                                                <span class="gov-tag <?php echo $p['status'] === 'paid' ? 'gov-tag-green' : 'gov-tag-yellow'; ?>" style="font-size:9px; padding:1px 4px; text-transform:none;">
-                                                    <?php echo $p['status']; ?>
-                                                </span><br>
-                                                Ref: <code><?php echo htmlspecialchars($p['transaction_ref'] ?: 'Pending Review'); ?></code>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <?php endif; ?>
 
                     <!-- TIMED EXAM OVERLAY TERMINAL -->
                     <?php if ($active_exam): ?>
@@ -1031,22 +1454,97 @@ if ($user_role === 'admin') {
                             <input type="hidden" id="violations_field" name="violations" value="0">
                             <input type="hidden" id="force_submit_flag" name="force_submit_violation" value="0">
 
-                            <!-- Mock exam questions -->
-                            <div class="gov-form-group">
-                                <label class="gov-label">Question 1: Define administrative ethics in research.</label>
-                                <textarea class="gov-textarea" rows="2" style="max-width:100%;" required placeholder="Type answer here..."></textarea>
-                            </div>
-                            <div class="gov-form-group">
-                                <label class="gov-label">Question 2: Detail citation guidelines for secondary references.</label>
-                                <textarea class="gov-textarea" rows="2" style="max-width:100%;" required placeholder="Type answer here..."></textarea>
-                            </div>
-                            <div class="gov-form-group">
-                                <label class="gov-label">Question 3: Elaborate on core parameters related to Faculty focus studies.</label>
-                                <textarea class="gov-textarea" rows="2" style="max-width:100%;" required placeholder="Type answer here..."></textarea>
-                            </div>
+                            <!-- Dynamic exam questions based on Faculty -->
+                            <?php 
+                            $fac_name_lower = strtolower($enrollment ? ($enrollment['name'] ?? "") : "");
+                            if ($fac_name_lower === 'business'): ?>
+                                <div class="gov-form-group">
+                                    <label class="gov-label" style="font-size:16px;">Question 1: Which core document outlines business regulations and research ethics?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="A" required> A. Standard Ledger Guide</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="B"> B. Orientation Ethics Guide</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="C"> C. Financial Audit Manual</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="D"> D. Code of Business Conduct</label>
+                                    </div>
+                                </div>
+                                <div class="gov-form-group" style="margin-top:25px;">
+                                    <label class="gov-label" style="font-size:16px;">Question 2: What defines strategic human resource compliance in human capital?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="A" required> A. Setting standardized payroll metrics</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="B"> B. Aligning workforce protocols with organizational ethics and goals</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="C"> C. Implementing automated contractor shifts</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="D"> D. Daily employee time logging audits</label>
+                                    </div>
+                                </div>
+                                <div class="gov-form-group" style="margin-top:25px;">
+                                    <label class="gov-label" style="font-size:16px;">Question 3: Which protocol is used to evaluate startup financial viability?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="A" required> A. Ledger double-entry checking</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="B"> B. Net Present Value (NPV) and operational break-even analysis</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="C"> C. Cash count index checking</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="D"> D. Rep code referral tracking</label>
+                                    </div>
+                                </div>
+                            <?php elseif ($fac_name_lower === 'health'): ?>
+                                <div class="gov-form-group">
+                                    <label class="gov-label" style="font-size:16px;">Question 1: What is the primary procedure for clinical contamination safety?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="A" required> A. Wiping surfaces once daily</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="B"> B. Multi-barrier isolation and strict sterile field protocols</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="C"> C. Maintaining open ventilation parameters</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="D"> D. Standard medical gloves audits</label>
+                                    </div>
+                                </div>
+                                <div class="gov-form-group" style="margin-top:25px;">
+                                    <label class="gov-label" style="font-size:16px;">Question 2: What does HIPAA require for digital patient record tracking?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="A" required> A. Maintaining printed files in registry folders</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="B"> B. End-to-end audit logs, access tracking, and storage encryption</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="C"> C. Sharing registry files with authorized rep consultants</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="D"> D. Storing clinical dossiers in local PC directories</label>
+                                    </div>
+                                </div>
+                                <div class="gov-form-group" style="margin-top:25px;">
+                                    <label class="gov-label" style="font-size:16px;">Question 3: What defines an epidemiological outbreak audit workflow?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="A" required> A. Reviewing daily pharmacy medicine logs</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="B"> B. Tracing index cases, auditing compliance, and setting quarantine guidelines</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="C"> C. Dispatching public health warning leaflets</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="D"> D. Surveying community hospital numbers</label>
+                                    </div>
+                                </div>
+                            <?php else: ?> <!-- Nutrition -->
+                                <div class="gov-form-group">
+                                    <label class="gov-label" style="font-size:16px;">Question 1: What cellular process is directly regulated by micronutrient profiles?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="A" required> A. Digestion enzyme activation and mitochondrial respiration cofactors</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="B"> B. Standard muscular tissue ATP contractions</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="C"> C. Pancreas insulin synthesis pathways</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q1" value="D"> D. Cell membrane fatty acid balance</label>
+                                    </div>
+                                </div>
+                                <div class="gov-form-group" style="margin-top:25px;">
+                                    <label class="gov-label" style="font-size:16px;">Question 2: Which profile is recommended for a clinical cardiovascular management audit?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="A" required> A. High sucrose carbohydrate loading</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="B"> B. Low sodium DASH diet rich in magnesium and omega-3 fatty acids</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="C"> C. Pure plant proteins loading profile</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q2" value="D"> D. Intermittent liquid fasting protocols</label>
+                                    </div>
+                                </div>
+                                <div class="gov-form-group" style="margin-top:25px;">
+                                    <label class="gov-label" style="font-size:16px;">Question 3: What represents the highest level of nutritional research verification?</label>
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px; font-size:14px; color:var(--text-primary);">
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="A" required> A. Individual patient case diaries</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="B"> B. Randomized Double-Blind Controlled Trials and Systematic Meta-Analyses</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="C"> C. Peer review nutrition guides</label>
+                                        <label style="cursor:pointer;"><input type="radio" name="q3" value="D"> D. University focus research panels</label>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
 
-                            <div style="margin-top: 30px;">
-                                <button type="button" onclick="finishExamNormal()" class="gov-button">Submit Exam Paper</button>
+                            <div style="margin-top: 40px; border-top: 1.5px solid var(--border-main); padding-top: 20px;">
+                                <button type="button" onclick="finishExamNormal()" class="gov-button" style="border-radius:6px; padding:12px 30px;">Submit Exam Paper</button>
                             </div>
                         </form>
                     </div>
@@ -1471,6 +1969,137 @@ if ($user_role === 'admin') {
                                 </table>
                             </div>
                         <?php endif; ?>
+
+                    <?php elseif ($page === 'exams_report'): ?>
+                        <div class="db-card">
+                            <div class="db-card-header" style="margin-bottom:20px;">
+                                <h2>Timed Exams Violations & Status Directory</h2>
+                                <p class="gov-hint">Monitor active and historic student timed exam attempts, scores, and detected cheating lockouts.</p>
+                            </div>
+
+                            <table class="gov-table">
+                                <thead>
+                                    <tr>
+                                        <th>Attempt ID</th>
+                                        <th>Student</th>
+                                        <th>Faculty Program</th>
+                                        <th>Achieved Score</th>
+                                        <th>Violations</th>
+                                        <th>Status Badge</th>
+                                        <th>Time Interval</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($all_exam_attempts)): ?>
+                                        <tr>
+                                            <td colspan="7" class="gov-hint" style="text-align:center;">No timed exam attempts registered in the system.</td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($all_exam_attempts as $att): ?>
+                                            <tr style="<?php echo $att['status'] === 'force_submitted_violation' ? 'background-color:#fff5f5;' : ''; ?>">
+                                                <td>#<?php echo $att['id']; ?></td>
+                                                <td><strong><?php echo htmlspecialchars($att['student_name']); ?></strong></td>
+                                                <td>Faculty of <?php echo htmlspecialchars($att['faculty_name'] ?: 'N/A'); ?></td>
+                                                <td>
+                                                    <strong style="color:<?php echo $att['score'] >= 60 ? '#00703c' : '#d4351c'; ?>;">
+                                                        <?php echo number_format($att['score'], 2); ?>%
+                                                    </strong>
+                                                </td>
+                                                <td>
+                                                    <span class="gov-tag <?php 
+                                                        if ($att['violation_count'] >= 2) echo 'gov-tag-red';
+                                                        elseif ($att['violation_count'] == 1) echo 'gov-tag-yellow';
+                                                        else echo 'gov-tag-green';
+                                                    ?>">
+                                                        <?php echo $att['violation_count']; ?> Violations
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span style="font-weight:600; text-transform:uppercase; font-size:11px; color:<?php 
+                                                        if ($att['status'] === 'completed') echo '#00703c';
+                                                        elseif ($att['status'] === 'in_progress') echo '#002f6c';
+                                                        else echo '#d4351c';
+                                                    ?>;">
+                                                        <?php echo htmlspecialchars(str_replace('_', ' ', $att['status'])); ?>
+                                                    </span>
+                                                </td>
+                                                <td style="font-size:12px; line-height:1.3; color:#555;">
+                                                    Start: <?php echo $att['start_time']; ?><br>
+                                                    End: <?php echo $att['end_time'] ?: 'Active Session'; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    <?php elseif ($page === 'certificates_registry'): ?>
+                        <div class="db-card">
+                            <div class="db-card-header" style="margin-bottom:20px;">
+                                <h2>Issued Certificate Credentials Registry Ledger</h2>
+                                <p class="gov-hint">Manage all issued student diploma certificates. Verification records can be revoked or re-approved instantly.</p>
+                            </div>
+
+                            <table class="gov-table">
+                                <thead>
+                                    <tr>
+                                        <th>Record ID</th>
+                                        <th>Student Name</th>
+                                        <th>Course Program</th>
+                                        <th>Registry Certificate UID</th>
+                                        <th>Status Tag</th>
+                                        <th>Date Issued</th>
+                                        <th style="text-align:right;">Actions / Operations</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($all_certificates)): ?>
+                                        <tr>
+                                            <td colspan="7" class="gov-hint" style="text-align:center;">No certificate records are currently generated.</td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($all_certificates as $c): ?>
+                                            <tr>
+                                                <td>#<?php echo $c['id']; ?></td>
+                                                <td><strong><?php echo htmlspecialchars($c['student_name']); ?></strong></td>
+                                                <td>Faculty of <?php echo htmlspecialchars($c['faculty_name'] ?: 'N/A'); ?></td>
+                                                <td>
+                                                    <code><?php echo htmlspecialchars($c['certificate_uid']); ?></code>
+                                                </td>
+                                                <td>
+                                                    <span class="gov-tag <?php 
+                                                        if ($c['verification_status'] === 'approved') echo 'gov-tag-green';
+                                                        elseif ($c['verification_status'] === 'revoked') echo 'gov-tag-red';
+                                                        else echo 'gov-tag-yellow';
+                                                    ?>">
+                                                        <?php echo strtoupper($c['verification_status']); ?>
+                                                    </span>
+                                                </td>
+                                                <td style="font-size:13px;"><?php echo $c['issue_date']; ?></td>
+                                                <td style="text-align:right;">
+                                                    <a href="certificate.php?uid=<?php echo urlencode($c['certificate_uid']); ?>" target="_blank" class="btn-action btn-view" style="display:inline-block; text-decoration:none; padding:4px 8px; font-size:11px; margin-right:4px;">Print View</a>
+                                                    
+                                                    <?php if ($c['verification_status'] === 'approved'): ?>
+                                                        <form action="dashboard.php?page=certificates_registry" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to REVOKE this certificate public verification status?');">
+                                                            <input type="hidden" name="revoke_certificate" value="1">
+                                                            <input type="hidden" name="cert_id" value="<?php echo $c['id']; ?>">
+                                                            <button type="submit" class="btn-action btn-delete" style="padding:4px 8px; font-size:11px;">Revoke</button>
+                                                        </form>
+                                                    <?php else: ?>
+                                                        <form action="dashboard.php?page=certificates_registry" method="POST" style="display:inline;">
+                                                            <input type="hidden" name="approve_certificate" value="1">
+                                                            <input type="hidden" name="cert_id" value="<?php echo $c['id']; ?>">
+                                                            <button type="submit" class="btn-action btn-edit" style="padding:4px 8px; font-size:11px; background-color:#00703c;">Approve</button>
+                                                        </form>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
 
                     <?php endif; ?>
 

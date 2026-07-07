@@ -1084,3 +1084,224 @@ a:hover {
     width: 24px;
     text-align: center;
 }
+
+/* ====================================================================== */
+/* EXAM ANTI-CHEAT & TEXT SELECTION BLOCK                                 */
+/* ====================================================================== */
+.exam-terminal-overlay,
+.exam-terminal-overlay * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+/* ====================================================================== */
+/* STRIPE ELEMENTS / CARD PAYMENTS STYLING                               */
+/* ====================================================================== */
+.payment-method-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.payment-tab-btn {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    border: 2px solid var(--border-input);
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--bg-card);
+    transition: all 0.2s;
+    color: var(--text-primary);
+}
+
+.payment-tab-btn.active {
+    border-color: #002F6C;
+    background-color: rgba(0, 47, 108, 0.04);
+    color: #002F6C;
+}
+
+.stripe-card-form {
+    border: 2px solid #002F6C;
+    padding: 24px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.card-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.card-row-split {
+    display: flex;
+    gap: 15px;
+}
+
+.card-row-split > div {
+    flex: 1;
+}
+
+.card-brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--text-hint);
+}
+
+.card-brand-icon {
+    font-weight: bold;
+    padding: 2px 6px;
+    border: 1px solid var(--border-input);
+    border-radius: 4px;
+    font-size: 11px;
+    background: var(--bg-secondary);
+}
+
+/* ====================================================================== */
+/* VERIFICATION PORTAL STYLING                                           */
+/* ====================================================================== */
+.verify-search-container {
+    background: var(--bg-card);
+    border: 2px solid var(--border-card);
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 30px;
+}
+
+.verify-badge-approved {
+    background-color: #00703c;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 15px;
+    display: inline-block;
+}
+
+.verify-badge-revoked {
+    background-color: #d4351c;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 15px;
+    display: inline-block;
+}
+
+/* ====================================================================== */
+/* PREMIUM PRINT-FRIENDLY DIPLOMA STYLE                                   */
+/* ====================================================================== */
+.certificate-container {
+    background: #ffffff;
+    color: #1e1e1e;
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 60px;
+    border: 20px double #bf9000;
+    box-shadow: 0 0 30px rgba(0,0,0,0.15);
+    position: relative;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    text-align: center;
+}
+
+.certificate-seal {
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, #f1c40f 0%, #d4ac0d 60%, #9a7d0a 100%);
+    border-radius: 50%;
+    margin: 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    border: 3px dashed #ffffff;
+}
+
+.certificate-seal::after {
+    content: "LIAB";
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 18px;
+    letter-spacing: 2px;
+}
+
+.certificate-title {
+    font-size: 38px;
+    color: #0d233a;
+    font-family: 'Georgia', serif;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.certificate-subtitle {
+    font-size: 15px;
+    letter-spacing: 4px;
+    color: #7f8c8d;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+}
+
+.certificate-recipient {
+    font-size: 32px;
+    color: #1a1a1a;
+    font-weight: normal;
+    margin: 25px 0;
+    border-bottom: 2px solid #bf9000;
+    display: inline-block;
+    padding-bottom: 5px;
+    min-width: 300px;
+}
+
+.certificate-faculty {
+    font-size: 20px;
+    font-weight: bold;
+    color: #0d233a;
+    margin: 15px 0;
+}
+
+.certificate-metadata {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 50px;
+    font-size: 13px;
+    color: #555555;
+    border-top: 1px solid #eeeeee;
+    padding-top: 20px;
+}
+
+.certificate-qr {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+}
+
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .gov-header, .db-sidebar, .db-topbar, .print-btn-section, .db-nav-menu, footer {
+        display: none !important;
+    }
+    .certificate-container {
+        margin: 0 auto !important;
+        box-shadow: none !important;
+        border: 20px double #bf9000 !important;
+        page-break-inside: avoid !important;
+    }
+}
