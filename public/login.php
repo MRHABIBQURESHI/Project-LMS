@@ -58,8 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="login-left-panel">
             <div class="login-card">
                 
-                <div style="margin-bottom: 25px; text-align: left;">
-                    <img src="assets/images/logo.png" alt="Logo" style="max-height: 48px; object-fit: contain;">
+                <!-- Mobile Logo Branding Header (Only visible on screens < 960px) -->
+                <div class="mobile-logo-header">
+                    <img src="assets/images/logo.png" alt="UK London International Award Board Logo">
                 </div>
                 <h1 class="login-title">Login</h1>
 
@@ -104,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- Right Panel: Decorative Illustration (Hidden on mobile) -->
         <div class="login-right-panel">
-            <img class="login-illustration-img" src="login_illustration.png" alt="UK London International Award Board Illustration">
+            <img class="login-illustration-img" src="assets/images/logo.png" alt="UK London International Award Board Logo">
         </div>
 
     </div>

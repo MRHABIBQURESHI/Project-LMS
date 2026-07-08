@@ -71,11 +71,15 @@ CREATE TABLE IF NOT EXISTS `exam_attempts` (
 CREATE TABLE IF NOT EXISTS `certificates` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT NOT NULL,
+  `course_id` INT DEFAULT NULL,
+  `exam_attempt_id` INT DEFAULT NULL,
   `certificate_uid` VARCHAR(100) UNIQUE NOT NULL,
   `issue_date` DATE NOT NULL,
   `pdf_path` VARCHAR(255) NOT NULL,
   `verification_status` ENUM('pending', 'approved', 'revoked') DEFAULT 'approved',
-  FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`course_id`) REFERENCES `faculties` (`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`exam_attempt_id`) REFERENCES `exam_attempts` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `payments` (

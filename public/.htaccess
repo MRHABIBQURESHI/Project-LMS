@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Route /verify to verify.php
+    RewriteRule ^verify$ verify.php [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

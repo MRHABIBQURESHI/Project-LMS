@@ -152,6 +152,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->beginTransaction();
                 
+                // Fetch the in_progress attempt ID first
+                $attempt_stmt = $pdo->prepare("SELECT id FROM exam_attempts WHERE user_id = ? AND exam_id = ? AND status = 'in_progress' LIMIT 1");
+                $attempt_stmt->execute([$user_id, $exam_id]);
+                $attempt_id = $attempt_stmt->fetchColumn();
+
                 // Update active in_progress exam attempt instead of inserting a new duplicate row
                 $stmt = $pdo->prepare("UPDATE exam_attempts SET score = ?, status = ?, violation_count = ?, end_time = CURRENT_TIMESTAMP WHERE user_id = ? AND exam_id = ? AND status = 'in_progress'");
                 $stmt->execute([$score, $status, $violations, $user_id, $exam_id]);
@@ -168,22 +173,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
                 
-                // Determine pass threshold (updated to 60.0% matching specification)
-                $pass_threshold = 60.00;
+                // Determine pass threshold (updated to 70.0% as per Awarding Board requirements)
+                $pass_threshold = 70.00;
                 
-                if ($score >= $pass_threshold) {
-                    // Generate verifiable certificate UID
-                    $cert_uid = 'LIAB-' . strtoupper(substr(md5(uniqid()), 0, 8)) . '-' . $user_id;
-                    $pdf_mock_path = 'uploads/certificates/cert_' . $user_id . '_' . $exam_id . '.pdf';
+                if ($score >= $pass_threshold && $status === 'completed') {
+                    // Fetch faculty_id from exam to act as course_id
+                    $exam_query = $pdo->prepare("SELECT faculty_id FROM exams WHERE id = ?");
+                    $exam_query->execute([$exam_id]);
+                    $course_id = $exam_query->fetchColumn();
                     
-                    // Create certificate folder if not exists
-                    if (!file_exists(__DIR__ . '/uploads/certificates')) {
-                        mkdir(__DIR__ . '/uploads/certificates', 0777, true);
+                    if ($course_id) {
+                        // Check if certificate already exists
+                        $chk_cert = $pdo->prepare("SELECT id FROM certificates WHERE user_id = ? AND course_id = ?");
+                        $chk_cert->execute([$user_id, $course_id]);
+                        $existing_cert = $chk_cert->fetchColumn();
+                        
+                        if (!$existing_cert) {
+                            // Generate unique sequential Certificate Number: REG-LDN-2026-XXXXX
+                            $current_year = date('Y');
+                            $seq_query = $pdo->prepare("SELECT certificate_uid FROM certificates WHERE certificate_uid LIKE ? ORDER BY id DESC LIMIT 1");
+                            $seq_query->execute(["REG-LDN-$current_year-%"]);
+                            $last_cert = $seq_query->fetchColumn();
+                            
+                            $next_num = 1;
+                            if ($last_cert) {
+                                $parts = explode('-', $last_cert);
+                                $last_num = intval(end($parts));
+                                $next_num = $last_num + 1;
+                            }
+                            $cert_uid = sprintf("REG-LDN-%s-%05d", $current_year, $next_num);
+                            $pdf_path = 'uploads/certificates/cert_' . $user_id . '_' . $course_id . '.pdf';
+                            $pdf_full_path = __DIR__ . '/' . $pdf_path;
+                            
+                            // Insert certificate
+                            $cert_stmt = $pdo->prepare("INSERT INTO certificates (user_id, course_id, exam_attempt_id, certificate_uid, issue_date, pdf_path, verification_status) VALUES (?, ?, ?, ?, CURDATE(), ?, 'approved')");
+                            $cert_stmt->execute([$user_id, $course_id, $attempt_id, $cert_uid, $pdf_path]);
+                            
+                            // Fetch student name and course name for PDF
+                            $std_query = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
+                            $std_query->execute([$user_id]);
+                            $student_name = $std_query->fetchColumn();
+                            
+                            $fac_query = $pdo->prepare("SELECT name FROM faculties WHERE id = ?");
+                            $fac_query->execute([$course_id]);
+                            $faculty_name = $fac_query->fetchColumn();
+                            $course_title = "Faculty of " . $faculty_name;
+                            
+                            // Generate PDF certificate
+                            require_once __DIR__ . '/pdf_helper.php';
+                            generate_certificate_pdf($student_name, $course_title, date('Y-m-d'), $cert_uid, $pdf_full_path);
+                        }
                     }
-                    
-                    // Insert certificate
-                    $cert_stmt = $pdo->prepare("INSERT INTO certificates (user_id, certificate_uid, issue_date, pdf_path, verification_status) VALUES (?, ?, CURDATE(), ?, 'approved')");
-                    $cert_stmt->execute([$user_id, $cert_uid, $pdf_mock_path]);
                 }
                 
                 $pdo->commit();
@@ -201,13 +241,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $exam_id = intval($_POST['exam_id']);
             try {
                 $pdo->beginTransaction();
-                // Close any orphan attempts
-                $clear_stmt = $pdo->prepare("UPDATE exam_attempts SET status = 'force_submitted_violation', score = 0.00, end_time = CURRENT_TIMESTAMP WHERE user_id = ? AND status = 'in_progress'");
-                $clear_stmt->execute([$user_id]);
                 
-                // Create active in_progress record
-                $stmt = $pdo->prepare("INSERT INTO exam_attempts (user_id, exam_id, score, status, violation_count, start_time) VALUES (?, ?, NULL, 'in_progress', 0, CURRENT_TIMESTAMP)");
-                $stmt->execute([$user_id, $exam_id]);
+                // Prevent attempt if already passed (score >= 70% and status = 'completed')
+                $chk_passed = $pdo->prepare("SELECT COUNT(*) FROM exam_attempts WHERE user_id = ? AND exam_id = ? AND score >= 70.00 AND status = 'completed'");
+                $chk_passed->execute([$user_id, $exam_id]);
+                $has_passed = $chk_passed->fetchColumn() > 0;
+                
+                if ($has_passed) {
+                    $error_msg = 'Your result has been locked. You have already passed this examination.';
+                } else {
+                    // Close any orphan attempts
+                    $clear_stmt = $pdo->prepare("UPDATE exam_attempts SET status = 'force_submitted_violation', score = 0.00, end_time = CURRENT_TIMESTAMP WHERE user_id = ? AND status = 'in_progress'");
+                    $clear_stmt->execute([$user_id]);
+                    
+                    // Create active in_progress record
+                    $stmt = $pdo->prepare("INSERT INTO exam_attempts (user_id, exam_id, score, status, violation_count, start_time) VALUES (?, ?, NULL, 'in_progress', 0, CURRENT_TIMESTAMP)");
+                    $stmt->execute([$user_id, $exam_id]);
+                    
+                    $success_msg = 'Exam terminal initialized. Monitoring active.';
+                }
                 $pdo->commit();
                 
                 $success_msg = 'Exam terminal initialized. Monitoring active.';
@@ -537,6 +589,130 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error_msg = 'Database error approving certificate: ' . $e->getMessage();
             }
         }
+
+        // 9. Edit Assignment Grade & Feedback
+        if (isset($_POST['edit_assignment_grade'])) {
+            $assignment_id = intval($_POST['assignment_id']);
+            $grade = trim($_POST['grade']);
+            $feedback = trim($_POST['feedback']);
+            try {
+                $stmt = $pdo->prepare("UPDATE assignments SET grade = ?, feedback = ?, status = 'reviewed' WHERE id = ?");
+                $stmt->execute([$grade, $feedback, $assignment_id]);
+                $success_msg = 'Assignment grade and feedback updated successfully.';
+            } catch (PDOException $e) {
+                $error_msg = 'Database error updating assignment grade: ' . $e->getMessage();
+            }
+        }
+
+        // 10. Edit Exam Score & Status
+        if (isset($_POST['edit_exam_score'])) {
+            $attempt_id = intval($_POST['attempt_id']);
+            $score = floatval($_POST['score']);
+            $status = trim($_POST['status']);
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("SELECT user_id, exam_id FROM exam_attempts WHERE id = ?");
+                $stmt->execute([$attempt_id]);
+                $attempt_data = $stmt->fetch();
+                if ($attempt_data) {
+                    $user_id_temp = $attempt_data['user_id'];
+                    $exam_id_temp = $attempt_data['exam_id'];
+                    $up_stmt = $pdo->prepare("UPDATE exam_attempts SET score = ?, status = ? WHERE id = ?");
+                    $up_stmt->execute([$score, $status, $attempt_id]);
+                    if ($score >= 70.00 && $status === 'completed') {
+                        $exam_query = $pdo->prepare("SELECT faculty_id FROM exams WHERE id = ?");
+                        $exam_query->execute([$exam_id_temp]);
+                        $course_id = $exam_query->fetchColumn();
+                        if ($course_id) {
+                            $chk_cert = $pdo->prepare("SELECT id FROM certificates WHERE user_id = ? AND course_id = ?");
+                            $chk_cert->execute([$user_id_temp, $course_id]);
+                            $existing_cert = $chk_cert->fetchColumn();
+                            if (!$existing_cert) {
+                                $current_year = date('Y');
+                                $seq_query = $pdo->prepare("SELECT certificate_uid FROM certificates WHERE certificate_uid LIKE ? ORDER BY id DESC LIMIT 1");
+                                $seq_query->execute(["REG-LDN-$current_year-%"]);
+                                $last_cert = $seq_query->fetchColumn();
+                                $next_num = 1;
+                                if ($last_cert) {
+                                    $parts = explode('-', $last_cert);
+                                    $last_num = intval(end($parts));
+                                    $next_num = $last_num + 1;
+                                }
+                                $cert_uid = sprintf("REG-LDN-%s-%05d", $current_year, $next_num);
+                                $pdf_path = 'uploads/certificates/cert_' . $user_id_temp . '_' . $course_id . '.pdf';
+                                $pdf_full_path = __DIR__ . '/' . $pdf_path;
+                                $cert_stmt = $pdo->prepare("INSERT INTO certificates (user_id, course_id, exam_attempt_id, certificate_uid, issue_date, pdf_path, verification_status) VALUES (?, ?, ?, ?, CURDATE(), ?, 'approved')");
+                                $cert_stmt->execute([$user_id_temp, $course_id, $attempt_id, $cert_uid, $pdf_path]);
+                                $std_query = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
+                                $std_query->execute([$user_id_temp]);
+                                $student_name = $std_query->fetchColumn();
+                                $fac_query = $pdo->prepare("SELECT name FROM faculties WHERE id = ?");
+                                $fac_query->execute([$course_id]);
+                                $faculty_name = $fac_query->fetchColumn();
+                                $course_title = "Faculty of " . $faculty_name;
+                                require_once __DIR__ . '/pdf_helper.php';
+                                generate_certificate_pdf($student_name, $course_title, date('Y-m-d'), $cert_uid, $pdf_full_path);
+                            }
+                        }
+                    }
+                    $success_msg = 'Exam attempt details updated successfully.';
+                } else {
+                    $error_msg = 'Exam attempt record not found.';
+                }
+                $pdo->commit();
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $error_msg = 'Database error updating exam attempt: ' . $e->getMessage();
+            }
+        }
+
+        // 11. Manually Award Certificate
+        if (isset($_POST['manual_award_certificate'])) {
+            $user_id_temp = intval($_POST['user_id']);
+            $course_id = intval($_POST['course_id']);
+            try {
+                $pdo->beginTransaction();
+                $chk_cert = $pdo->prepare("SELECT id FROM certificates WHERE user_id = ? AND course_id = ?");
+                $chk_cert->execute([$user_id_temp, $course_id]);
+                if ($chk_cert->fetchColumn()) {
+                    $error_msg = 'This student already has a certificate awarded for the selected program.';
+                } else {
+                    $current_year = date('Y');
+                    $seq_query = $pdo->prepare("SELECT certificate_uid FROM certificates WHERE certificate_uid LIKE ? ORDER BY id DESC LIMIT 1");
+                    $seq_query->execute(["REG-LDN-$current_year-%"]);
+                    $last_cert = $seq_query->fetchColumn();
+                    $next_num = 1;
+                    if ($last_cert) {
+                        $parts = explode('-', $last_cert);
+                        $last_num = intval(end($parts));
+                        $next_num = $last_num + 1;
+                    }
+                    $cert_uid = sprintf("REG-LDN-%s-%05d", $current_year, $next_num);
+                    $pdf_path = 'uploads/certificates/cert_' . $user_id_temp . '_' . $course_id . '.pdf';
+                    $pdf_full_path = __DIR__ . '/' . $pdf_path;
+                    $cert_stmt = $pdo->prepare("INSERT INTO certificates (user_id, course_id, exam_attempt_id, certificate_uid, issue_date, pdf_path, verification_status) VALUES (?, ?, NULL, ?, CURDATE(), ?, 'approved')");
+                    $cert_stmt->execute([$user_id_temp, $course_id, $cert_uid, $pdf_path]);
+                    $std_query = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
+                    $std_query->execute([$user_id_temp]);
+                    $student_name = $std_query->fetchColumn();
+                    $fac_query = $pdo->prepare("SELECT name FROM faculties WHERE id = ?");
+                    $fac_query->execute([$course_id]);
+                    $faculty_name = $fac_query->fetchColumn();
+                    $course_title = "Faculty of " . $faculty_name;
+                    require_once __DIR__ . '/pdf_helper.php';
+                    generate_certificate_pdf($student_name, $course_title, date('Y-m-d'), $cert_uid, $pdf_full_path);
+                    $success_msg = 'Certificate manually awarded and PDF generated successfully.';
+                }
+                $pdo->commit();
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $error_msg = 'Database error awarding manual certificate: ' . $e->getMessage();
+            }
+        }
     }
 
     // ============================================================
@@ -666,16 +842,24 @@ if ($user_role === 'student' && $account_status === 'active') {
         }
         
         $exam_failed = false;
+        $exam_passed = false;
         $resit_unlocked = true;
+        foreach ($exam_results as $att) {
+            if ($att['score'] >= 70.00 && $att['status'] === 'completed') {
+                $exam_passed = true;
+            }
+        }
         if (!empty($exam_results)) {
             $latest_attempt = end($exam_results);
-            if ($latest_attempt['score'] < 60 || $latest_attempt['status'] === 'force_submitted_violation') {
-                $exam_failed = true;
-                $resit_unlocked = false;
-                foreach ($payments_history as $p) {
-                    if ($p['type'] === 'tuition' && $p['status'] === 'paid' && floatval($p['amount']) == 150.00 && strtotime($p['created_at']) > strtotime($latest_attempt['end_time'])) {
-                        $resit_unlocked = true;
-                        break;
+            if ($latest_attempt['score'] < 70.00 || $latest_attempt['status'] === 'force_submitted_violation') {
+                if (!$exam_passed) {
+                    $exam_failed = true;
+                    $resit_unlocked = false;
+                    foreach ($payments_history as $p) {
+                        if ($p['type'] === 'tuition' && $p['status'] === 'paid' && floatval($p['amount']) == 150.00 && strtotime($p['created_at']) > strtotime($latest_attempt['end_time'])) {
+                            $resit_unlocked = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -1274,7 +1458,7 @@ if ($user_role === 'admin') {
                         <!-- Exams card -->
                         <div class="db-card" id="examsSection">
                             <div class="db-card-title">Faculty Timed Assessment</div>
-                            <p style="font-size: 14px; margin-bottom: 20px;">Complete your timed examination. Anti-cheat visibility tracking metrics are active. Minimum passing grade is 60%.</p>
+                            <p style="font-size: 14px; margin-bottom: 20px;">Complete your timed examination. Anti-cheat visibility tracking metrics are active. Minimum passing grade is 70%.</p>
 
                             <div class="gov-list-group" style="margin-top: 10px; margin-bottom: 0;">
                                 <?php if (!$active_exam): ?>
@@ -1284,12 +1468,12 @@ if ($user_role === 'admin') {
                                         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
                                             <div>
                                                 <span class="gov-list-key">Timed Comprehensive Assessment</span>
-                                                <span class="gov-hint" style="margin-top: 5px;">Pass Threshold: 60% | Duration: <?php echo $active_exam['duration_minutes']; ?> mins</span>
+                                                <span class="gov-hint" style="margin-top: 5px;">Pass Threshold: 70% | Duration: <?php echo $active_exam['duration_minutes']; ?> mins</span>
                                             </div>
                                             <div>
                                                 <?php if (!empty($exam_results)): ?>
                                                     <?php $latest_attempt = end($exam_results); ?>
-                                                    <span class="gov-tag <?php echo $latest_attempt['score'] >= 60 ? 'gov-tag-green' : 'gov-tag-yellow'; ?>">
+                                                    <span class="gov-tag <?php echo $latest_attempt['score'] >= 70 ? 'gov-tag-green' : 'gov-tag-yellow'; ?>">
                                                         Score: <?php echo $latest_attempt['score']; ?>% (<?php echo strtoupper($latest_attempt['status']); ?>)
                                                     </span>
                                                 <?php else: ?>
@@ -1299,7 +1483,12 @@ if ($user_role === 'admin') {
                                         </div>
 
                                         <div style="width:100%; margin-top: 10px;">
-                                            <?php if ($exam_failed): ?>
+                                            <?php if ($exam_passed): ?>
+                                                <div style="background-color: #fafcff; padding: 20px; border-left: 5px solid #00703c; border-radius: 4px; width:100%;">
+                                                    <h3 style="color:#00703c; margin-bottom:8px; font-size:14px; font-weight:bold;">✓ Assessment Passed & Locked</h3>
+                                                    <p style="font-size:12px; color:#555; margin-bottom:0; line-height:1.45;">You have successfully passed the final assessment with a score of 70% or higher. Your result is locked and your certificate has been awarded. You can view or download it from the Certificates tab.</p>
+                                                </div>
+                                            <?php elseif ($exam_failed): ?>
                                                 <?php if ($resit_unlocked): ?>
                                                     <div style="margin-bottom:12px; font-size:13px; color:#00703c; font-weight:600;">✓ Exam Resit eligibility unlocked. Ready to start attempt.</div>
                                                     <form action="dashboard.php?page=exams" method="POST" style="display:inline;">
@@ -1311,7 +1500,7 @@ if ($user_role === 'admin') {
                                                     <!-- Render Resit Paywall Form -->
                                                     <div style="background-color: #fafbfe; padding: 20px; border-left: 5px solid #d4351c; border-radius: 4px; width:100%;">
                                                         <h3 style="color:#d4351c; margin-bottom:8px; font-size:14px;">Assessment Resit Paywall</h3>
-                                                        <p style="font-size:12px; color:#555; margin-bottom:15px; line-height:1.45;">You did not achieve the required passing threshold of 60% on your exam attempt. To reactivate the assessment terminal and try again, you must process the Board Resit Fee of <strong>£150.00</strong>.</p>
+                                                        <p style="font-size:12px; color:#555; margin-bottom:15px; line-height:1.45;">You did not achieve the required passing threshold of 70% on your exam attempt. To reactivate the assessment terminal and try again, you must process the Board Resit Fee of <strong>£150.00</strong>.</p>
                                                         
                                                         <form action="dashboard.php?page=exams" method="POST" style="max-width:360px;">
                                                             <input type="hidden" name="pay_resit_fee" value="1">
@@ -1347,7 +1536,7 @@ if ($user_role === 'admin') {
                             <div class="db-card-title">Verifiable Issued Certificate Credentials</div>
                             <div class="gov-list-group" style="margin-top: 10px; margin-bottom: 0;">
                                 <?php if (empty($certificates)): ?>
-                                    <p class="gov-hint" style="padding: 10px 0;">No certificates issued yet. Pass your exam with 60% or more to unlock.</p>
+                                    <p class="gov-hint" style="padding: 10px 0;">No certificates issued yet. Pass your exam with 70% or more to unlock.</p>
                                 <?php else: ?>
                                     <?php foreach ($certificates as $c): ?>
                                         <div class="gov-list-row" style="padding: 15px 0;">
@@ -1803,6 +1992,20 @@ if ($user_role === 'admin') {
                                                                 <?php if ($va['grade']): ?>
                                                                     | <strong><?php echo $va['grade']; ?></strong>
                                                                 <?php endif; ?>
+                                                                <form action="dashboard.php?page=students&view_id=<?php echo $view_id; ?>" method="POST" style="margin-top:8px; display:block;">
+                                                                    <input type="hidden" name="edit_assignment_grade" value="1">
+                                                                    <input type="hidden" name="assignment_id" value="<?php echo $va['id']; ?>">
+                                                                    <div style="display:flex; gap:4px; align-items:center;">
+                                                                        <select class="gov-select" name="grade" style="font-size:10px; padding:2px; height:24px; width:90px;" required>
+                                                                            <option value="Pass" <?php echo $va['grade'] === 'Pass' ? 'selected' : ''; ?>>Pass</option>
+                                                                            <option value="Merit" <?php echo $va['grade'] === 'Merit' ? 'selected' : ''; ?>>Merit</option>
+                                                                            <option value="Distinction" <?php echo $va['grade'] === 'Distinction' ? 'selected' : ''; ?>>Distinction</option>
+                                                                            <option value="Refer" <?php echo $va['grade'] === 'Refer' ? 'selected' : ''; ?>>Refer (Fail)</option>
+                                                                        </select>
+                                                                        <input class="gov-input" name="feedback" type="text" placeholder="Remarks" value="<?php echo htmlspecialchars($va['feedback'] ?? ''); ?>" style="font-size:10px; padding:2px 4px; height:24px; width:100px;">
+                                                                        <button type="submit" class="gov-button" style="font-size:9px; padding:2px 6px; border-radius:3px; background-color:#002F6C; height:24px;">Save</button>
+                                                                    </div>
+                                                                </form>
                                                             </td>
                                                         </tr>
                                                     <?php endforeach; ?>
@@ -1829,7 +2032,21 @@ if ($user_role === 'admin') {
                                                     <?php foreach ($view_exams as $ve): ?>
                                                         <tr>
                                                             <td><?php echo $ve['end_time']; ?></td>
-                                                            <td><strong><?php echo $ve['score']; ?>%</strong> (Threshold: <?php echo $ve['pass_threshold']; ?>%)</td>
+                                                            <td>
+                                                                <strong><?php echo $ve['score']; ?>%</strong> (Threshold: <?php echo $ve['pass_threshold']; ?>%)
+                                                                <form action="dashboard.php?page=students&view_id=<?php echo $view_id; ?>" method="POST" style="margin-top:6px; display:block;">
+                                                                    <input type="hidden" name="edit_exam_score" value="1">
+                                                                    <input type="hidden" name="attempt_id" value="<?php echo $ve['id']; ?>">
+                                                                    <div style="display:flex; gap:4px; align-items:center;">
+                                                                        <input class="gov-input" name="score" type="number" step="0.01" min="0" max="100" value="<?php echo $ve['score']; ?>" required style="font-size:10px; padding:2px 4px; height:24px; width:55px;">
+                                                                        <select class="gov-select" name="status" style="font-size:10px; padding:2px; height:24px; width:90px;" required>
+                                                                            <option value="completed" <?php echo $ve['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                                                            <option value="force_submitted_violation" <?php echo $ve['status'] === 'force_submitted_violation' ? 'selected' : ''; ?>>Violation</option>
+                                                                        </select>
+                                                                        <button type="submit" class="gov-button" style="font-size:9px; padding:2px 6px; border-radius:3px; background-color:#002F6C; height:24px;">Save</button>
+                                                                    </div>
+                                                                </form>
+                                                            </td>
                                                             <td><?php echo $ve['violation_count']; ?> Violations</td>
                                                             <td>
                                                                 <span class="gov-tag <?php echo $ve['score'] >= $ve['pass_threshold'] ? 'gov-tag-green' : 'gov-tag-yellow'; ?>" style="font-size:10px; text-transform:none;">
@@ -1854,10 +2071,31 @@ if ($user_role === 'admin') {
                                                     <div style="font-size:13px; margin-bottom: 10px; border-bottom: 1px solid #EBF3FC; padding-bottom:8px;">
                                                         ID: <code><?php echo htmlspecialchars($vc['certificate_uid']); ?></code><br>
                                                         Date: <?php echo $vc['issue_date']; ?><br>
+                                                        Status: <span class="gov-tag <?php echo $vc['verification_status'] === 'approved' ? 'gov-tag-green' : 'gov-tag-red'; ?>" style="font-size:9px; padding:1px 4px; text-transform:none;"><?php echo $vc['verification_status']; ?></span><br>
                                                         <a href="<?php echo htmlspecialchars($vc['pdf_path']); ?>" download style="font-size:12px; font-weight:600; display:inline-block; margin-top:5px;">Download PDF &rarr;</a>
                                                     </div>
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
+                                            
+                                            <!-- Manual Award Form -->
+                                            <div style="border-top:1px solid #EBF3FC; margin-top:15px; padding-top:15px;">
+                                                <h4 style="font-size:12px; color:#002F6C; margin-bottom:8px; font-weight:600;">Manual Award Certificate</h4>
+                                                <form action="dashboard.php?page=students&view_id=<?php echo $view_id; ?>" method="POST">
+                                                    <input type="hidden" name="manual_award_certificate" value="1">
+                                                    <input type="hidden" name="user_id" value="<?php echo $view_id; ?>">
+                                                    <select class="gov-select" name="course_id" style="font-size:11px; padding:3px; height:28px; width:100%; margin-bottom:8px;" required>
+                                                        <option value="">-- Choose Course --</option>
+                                                        <?php
+                                                        $facs = $pdo->query("SELECT * FROM faculties")->fetchAll();
+                                                        foreach ($facs as $f) {
+                                                            $selected = ($f['id'] == $view_student['faculty_id']) ? 'selected' : '';
+                                                            echo '<option value="' . $f['id'] . '" ' . $selected . '>Faculty of ' . htmlspecialchars($f['name']) . '</option>';
+                                                        }
+                                                        ?>
+                                                    </select>
+                                                    <button type="submit" class="gov-button" style="font-size:10px; padding:6px 10px; border-radius:3px; width:100%; background-color:#00703c;">Award Now</button>
+                                                </form>
+                                            </div>
                                         </div>
 
                                         <h3 style="color:#002F6C; margin-bottom:15px; font-size:16px;">Remittance Transactions</h3>
@@ -2323,6 +2561,20 @@ if ($user_role === 'admin') {
             var sidebar = document.getElementById('dbSidebar');
             sidebar.classList.toggle('open');
         }
+
+        // Close sidebar when clicking main content area on mobile viewports
+        document.addEventListener('DOMContentLoaded', function() {
+            var mainContent = document.querySelector('.db-main');
+            if (mainContent) {
+                mainContent.addEventListener('click', function(e) {
+                    var sidebar = document.getElementById('dbSidebar');
+                    var toggleBtn = document.querySelector('.db-mobile-toggle');
+                    if (sidebar && sidebar.classList.contains('open') && e.target !== toggleBtn && !toggleBtn.contains(e.target) && !sidebar.contains(e.target)) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            }
+        });
 
         // Modal Helpers
         function showCreateModal() {
