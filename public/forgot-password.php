@@ -52,8 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="login-left-panel">
             <div class="login-card">
                 
-                <div style="margin-bottom: 25px; text-align: left;">
-                    <img src="assets/images/logo.png" alt="Logo" style="max-height: 48px; object-fit: contain;">
+                <!-- Mobile Logo Branding Header (Only visible on screens < 960px) -->
+                <div class="mobile-logo-header">
+                    <img src="assets/images/logo.png" alt="UK London International Award Board Logo">
                 </div>
                 <h1 class="login-title" style="font-size: 24px;">Reset Password</h1>
                 <p style="font-size: 14px; margin-bottom: 20px; color: #555;">Enter your registered email address and we will generate a password reset verification link.</p>
@@ -94,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- Right Panel: Side Panel Illustration -->
         <div class="login-right-panel">
-            <img class="login-illustration-img" src="login_illustration.png" alt="UK London International Award Board Illustration">
+            <img class="login-illustration-img" src="assets/images/logo.png" alt="UK London International Award Board Logo">
         </div>
 
     </div>
