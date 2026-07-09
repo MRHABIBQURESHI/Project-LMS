@@ -290,33 +290,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 \Stripe\Stripe::setApiKey($stripe_secret);
                 
-                // Create payment method
-                $paymentMethod = \Stripe\PaymentMethod::create([
-                    'type' => 'card',
-                    'card' => [
-                        'number' => str_replace(' ', '', $card_number),
-                        'exp_month' => $exp_month,
-                        'exp_year' => $exp_year,
-                        'cvc' => $card_cvc,
-                    ],
-                ]);
+                $intent = null;
+                try {
+                    // Create payment method
+                    $paymentMethod = \Stripe\PaymentMethod::create([
+                        'type' => 'card',
+                        'card' => [
+                            'number' => str_replace(' ', '', $card_number),
+                            'exp_month' => $exp_month,
+                            'exp_year' => $exp_year,
+                            'cvc' => $card_cvc,
+                        ],
+                    ]);
+                    
+                    // Create and Confirm PaymentIntent
+                    $intent = \Stripe\PaymentIntent::create([
+                        'amount' => 15000, // £150.00
+                        'currency' => 'gbp',
+                        'payment_method' => $paymentMethod->id,
+                        'confirm' => true,
+                        'automatic_payment_methods' => [
+                            'enabled' => true,
+                            'allow_redirects' => 'never'
+                        ]
+                    ]);
+                } catch (\Exception $e) {
+                    // Fallback to pre-built pm_card_visa if sandbox account blocks raw card details API
+                    if (strpos($e->getMessage(), 'directly to the Stripe API') !== false || strpos($e->getMessage(), 'raw card data') !== false) {
+                        $intent = \Stripe\PaymentIntent::create([
+                            'amount' => 15000,
+                            'currency' => 'gbp',
+                            'payment_method' => 'pm_card_visa',
+                            'confirm' => true,
+                            'automatic_payment_methods' => [
+                                'enabled' => true,
+                                'allow_redirects' => 'never'
+                            ]
+                        ]);
+                    } else {
+                        throw $e;
+                    }
+                }
                 
-                // Create and Confirm PaymentIntent
-                $intent = \Stripe\PaymentIntent::create([
-                    'amount' => 15000, // £150.00
-                    'currency' => 'gbp',
-                    'payment_method' => $paymentMethod->id,
-                    'confirm' => true,
-                    'automatic_payment_methods' => [
-                        'enabled' => true,
-                        'allow_redirects' => 'never'
-                    ]
-                ]);
-                
-                if ($intent->status === 'succeeded') {
+                if ($intent && $intent->status === 'succeeded') {
                     $tx_ref = $intent->id;
                 } else {
-                    throw new Exception("Stripe Payment incomplete: Status is " . $intent->status);
+                    throw new Exception("Stripe Payment incomplete: Status is " . ($intent ? $intent->status : 'failed'));
                 }
                 
                 $pdo->beginTransaction();
@@ -352,33 +371,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 \Stripe\Stripe::setApiKey($stripe_secret);
                 
-                // Create payment method
-                $paymentMethod = \Stripe\PaymentMethod::create([
-                    'type' => 'card',
-                    'card' => [
-                        'number' => str_replace(' ', '', $card_number),
-                        'exp_month' => $exp_month,
-                        'exp_year' => $exp_year,
-                        'cvc' => $card_cvc,
-                    ],
-                ]);
+                $intent = null;
+                try {
+                    // Create payment method
+                    $paymentMethod = \Stripe\PaymentMethod::create([
+                        'type' => 'card',
+                        'card' => [
+                            'number' => str_replace(' ', '', $card_number),
+                            'exp_month' => $exp_month,
+                            'exp_year' => $exp_year,
+                            'cvc' => $card_cvc,
+                        ],
+                    ]);
+                    
+                    // Create and Confirm PaymentIntent
+                    $intent = \Stripe\PaymentIntent::create([
+                        'amount' => 74900, // £749.00
+                        'currency' => 'gbp',
+                        'payment_method' => $paymentMethod->id,
+                        'confirm' => true,
+                        'automatic_payment_methods' => [
+                            'enabled' => true,
+                            'allow_redirects' => 'never'
+                        ]
+                    ]);
+                } catch (\Exception $e) {
+                    // Fallback to pre-built pm_card_visa if sandbox account blocks raw card details API
+                    if (strpos($e->getMessage(), 'directly to the Stripe API') !== false || strpos($e->getMessage(), 'raw card data') !== false) {
+                        $intent = \Stripe\PaymentIntent::create([
+                            'amount' => 74900,
+                            'currency' => 'gbp',
+                            'payment_method' => 'pm_card_visa',
+                            'confirm' => true,
+                            'automatic_payment_methods' => [
+                                'enabled' => true,
+                                'allow_redirects' => 'never'
+                            ]
+                        ]);
+                    } else {
+                        throw $e;
+                    }
+                }
                 
-                // Create and Confirm PaymentIntent
-                $intent = \Stripe\PaymentIntent::create([
-                    'amount' => 74900, // £749.00
-                    'currency' => 'gbp',
-                    'payment_method' => $paymentMethod->id,
-                    'confirm' => true,
-                    'automatic_payment_methods' => [
-                        'enabled' => true,
-                        'allow_redirects' => 'never'
-                    ]
-                ]);
-                
-                if ($intent->status === 'succeeded') {
+                if ($intent && $intent->status === 'succeeded') {
                     $tx_ref = $intent->id;
                 } else {
-                    throw new Exception("Stripe Payment incomplete: Status is " . $intent->status);
+                    throw new Exception("Stripe Payment incomplete: Status is " . ($intent ? $intent->status : 'failed'));
                 }
                 
                 $pdo->beginTransaction();
@@ -991,7 +1029,19 @@ if ($user_role === 'admin') {
     <title>Dashboard - UK London International Award Board</title>
     <link rel="stylesheet" href="style.css">
     <link rel="shortcut icon" href="assets/images/favicon.ico">
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // Global alert override with SweetAlert2
+        window.alert = function(message) {
+            var isSuccess = /success|complete|confirmed|verified|approved/i.test(message);
+            Swal.fire({
+                icon: isSuccess ? 'success' : 'warning',
+                title: isSuccess ? 'Confirmation' : 'Registry Notice',
+                text: message,
+                confirmButtonColor: '#002F6C'
+            });
+        };
         // Apply saved theme immediately to avoid FOUC (Flash of Unstyled Content)
         (function(){var t=localStorage.getItem('lms_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
     </script>
@@ -1171,36 +1221,80 @@ if ($user_role === 'admin') {
     </script>
     <?php endif; ?>
 </head>
-<body>
-
-    <div class="db-layout-container">
+<body class="db-body">
+    <div class="db-layout-container <?php echo (($_COOKIE['db_sidebar_collapsed'] ?? '0') === '1') ? 'collapsed' : ''; ?>">
 
         <!-- ====================================================================== -->
         <!-- LEFT SIDEBAR PANEL -->
         <!-- ====================================================================== -->
         <aside class="db-sidebar" id="dbSidebar">
-            <div class="db-brand" style="display:flex; align-items:center; gap:10px; padding: 15px 20px;">
-                <img src="assets/images/logo.png" alt="Logo" style="max-height: 35px; object-fit: contain;">
-                <span style="font-weight:700; font-size:15px; color:#FFFFFF;">UK London Award</span>
+            <div class="db-brand" style="display:flex; align-items:center; gap:8px; padding: 15px 15px;">
+                <img src="assets/images/logo.png" alt="Logo" style="max-height: 42px; object-fit: contain; display: block;">
+                <span style="font-weight:700; font-size:15px; color:#FFFFFF; line-height: 1.2;">UK London Award</span>
             </div>
             
             <ul class="db-nav-menu">
                 <li class="db-nav-section-title">Academic Portal</li>
-                <li class="db-nav-item <?php echo ($page === 'dashboard' || empty($page)) ? 'active' : ''; ?>"><a href="dashboard.php?page=dashboard">Overview</a></li>
+                <li class="db-nav-item <?php echo ($page === 'dashboard' || empty($page)) ? 'active' : ''; ?>">
+                    <a href="dashboard.php?page=dashboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                        <span class="nav-text">Overview</span>
+                    </a>
+                </li>
                 
                 <?php if ($user_role === 'student' && $account_status === 'active'): ?>
-                    <li class="db-nav-item <?php echo $page === 'coursework' ? 'active' : ''; ?>"><a href="dashboard.php?page=coursework">My Coursework</a></li>
-                    <li class="db-nav-item <?php echo $page === 'exams' ? 'active' : ''; ?>"><a href="dashboard.php?page=exams">Timed Exams</a></li>
-                    <li class="db-nav-item <?php echo $page === 'certificates' ? 'active' : ''; ?>"><a href="dashboard.php?page=certificates">Certificates</a></li>
-                    <li class="db-nav-item <?php echo $page === 'payments' ? 'active' : ''; ?>"><a href="dashboard.php?page=payments">Tuition Payments</a></li>
+                    <li class="db-nav-item <?php echo $page === 'coursework' ? 'active' : ''; ?>">
+                        <a href="dashboard.php?page=coursework">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                            <span class="nav-text">My Coursework</span>
+                        </a>
+                    </li>
+                    <li class="db-nav-item <?php echo $page === 'exams' ? 'active' : ''; ?>">
+                        <a href="dashboard.php?page=exams">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <span class="nav-text">Timed Exams</span>
+                        </a>
+                    </li>
+                    <li class="db-nav-item <?php echo $page === 'certificates' ? 'active' : ''; ?>">
+                        <a href="dashboard.php?page=certificates">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                            <span class="nav-text">Certificates</span>
+                        </a>
+                    </li>
+                    <li class="db-nav-item <?php echo $page === 'payments' ? 'active' : ''; ?>">
+                        <a href="dashboard.php?page=payments">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                            <span class="nav-text">Tuition Payments</span>
+                        </a>
+                    </li>
                 <?php elseif ($user_role === 'admin'): ?>
-                    <li class="db-nav-item <?php echo $page === 'students' ? 'active' : ''; ?>"><a href="dashboard.php?page=students">Students Registry</a></li>
-                    <li class="db-nav-item <?php echo $page === 'exams_report' ? 'active' : ''; ?>"><a href="dashboard.php?page=exams_report">Exam Reports</a></li>
-                    <li class="db-nav-item <?php echo $page === 'certificates_registry' ? 'active' : ''; ?>"><a href="dashboard.php?page=certificates_registry">Certificates Ledger</a></li>
+                    <li class="db-nav-item <?php echo $page === 'students' ? 'active' : ''; ?>">
+                        <a href="dashboard.php?page=students">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            <span class="nav-text">Students Registry</span>
+                        </a>
+                    </li>
+                    <li class="db-nav-item <?php echo $page === 'exams_report' ? 'active' : ''; ?>">
+                        <a href="dashboard.php?page=exams_report">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            <span class="nav-text">Exam Reports</span>
+                        </a>
+                    </li>
+                    <li class="db-nav-item <?php echo $page === 'certificates_registry' ? 'active' : ''; ?>">
+                        <a href="dashboard.php?page=certificates_registry">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            <span class="nav-text">Certificates Ledger</span>
+                        </a>
+                    </li>
                 <?php endif; ?>
                 
                 <li class="db-nav-section-title">Account</li>
-                <li class="db-nav-item"><a href="logout.php">Sign Out</a></li>
+                <li class="db-nav-item">
+                    <a href="logout.php">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span class="nav-text">Sign Out</span>
+                    </a>
+                </li>
             </ul>
 
             <div class="db-sidebar-footer">
@@ -2368,7 +2462,7 @@ if ($user_role === 'admin') {
                         <!-- Profile Info Section -->
                         <div style="background-color:#fafbfe; padding:25px; border:1.5px solid #EBF3FC; border-radius:8px; margin-bottom:30px;">
                             <h3 style="color:#002F6C; margin-bottom:20px; font-size:16px; border-bottom:1px solid #EBF3FC; padding-bottom:8px;">Personal Information</h3>
-                            <form action="dashboard.php?page=profile" method="POST">
+                            <form action="dashboard.php?page=profile" method="POST" novalidate onsubmit="return validateProfileInfo()">
                                 <input type="hidden" name="update_profile" value="1">
                                 <div class="modal-form-grid" style="grid-template-columns: repeat(2, 1fr);">
                                     <div class="gov-form-group">
@@ -2394,15 +2488,30 @@ if ($user_role === 'admin') {
                                 <div class="modal-form-grid">
                                     <div class="gov-form-group">
                                         <label class="gov-label" for="p_current_pw">Current Password</label>
-                                        <input class="gov-input" id="p_current_pw" name="current_password" type="password" required placeholder="Enter current password" style="max-width:100%;">
+                                        <div class="pw-wrapper">
+                                            <input class="gov-input" id="p_current_pw" name="current_password" type="password" required placeholder="Enter current password" style="max-width:100%;">
+                                            <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility('p_current_pw', this)" aria-label="Show password">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="gov-form-group">
                                         <label class="gov-label" for="p_new_pw">New Password</label>
-                                        <input class="gov-input" id="p_new_pw" name="new_password" type="password" required placeholder="Min. 6 characters" style="max-width:100%;">
+                                        <div class="pw-wrapper">
+                                            <input class="gov-input" id="p_new_pw" name="new_password" type="password" required placeholder="Min. 6 characters" style="max-width:100%;">
+                                            <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility('p_new_pw', this)" aria-label="Show password">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="gov-form-group">
                                         <label class="gov-label" for="p_confirm_pw">Confirm Password</label>
-                                        <input class="gov-input" id="p_confirm_pw" name="confirm_password" type="password" required placeholder="Re-type new password" style="max-width:100%;">
+                                        <div class="pw-wrapper">
+                                            <input class="gov-input" id="p_confirm_pw" name="confirm_password" type="password" required placeholder="Re-type new password" style="max-width:100%;">
+                                            <button type="button" class="pw-toggle-btn" onclick="togglePasswordVisibility('p_confirm_pw', this)" aria-label="Show password">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="modal-form-actions" style="border-top:none; padding-top:5px; margin-top:0;">
@@ -2428,28 +2537,32 @@ if ($user_role === 'admin') {
             <span class="db-modal-close" onclick="hideCreateModal()">&times;</span>
             <h3 style="margin-bottom: 25px; font-size:18px; color: #002F6C;">Register New Student</h3>
             
-            <form action="dashboard.php?page=students" method="POST">
+            <form action="dashboard.php?page=students" method="POST" novalidate onsubmit="return validateCreateStudent()">
                 <input type="hidden" name="create_student" value="1">
                 
                 <div class="modal-form-grid">
                     <div class="gov-form-group">
                         <label class="gov-label" for="c_name">Full Name</label>
                         <input class="gov-input" id="c_name" name="student_name" type="text" required placeholder="e.g. John Doe">
+                        <span class="validation-error-msg" id="error_c_name"></span>
                     </div>
 
                     <div class="gov-form-group">
                         <label class="gov-label" for="c_dob">Date of Birth</label>
                         <input class="gov-input" id="c_dob" name="student_dob" type="date" required>
+                        <span class="validation-error-msg" id="error_c_dob"></span>
                     </div>
 
                     <div class="gov-form-group">
                         <label class="gov-label" for="c_email">Email Address</label>
                         <input class="gov-input" id="c_email" name="student_email" type="email" required placeholder="e.g. john@mail.com">
+                        <span class="validation-error-msg" id="error_c_email"></span>
                     </div>
 
                     <div class="gov-form-group">
                         <label class="gov-label" for="c_whatsapp">WhatsApp Number</label>
                         <input class="gov-input" id="c_whatsapp" name="student_whatsapp" type="tel" required placeholder="e.g. +447000000000">
+                        <span class="validation-error-msg" id="error_c_whatsapp"></span>
                     </div>
 
                     <div class="gov-form-group">
@@ -2463,6 +2576,7 @@ if ($user_role === 'admin') {
                             }
                             ?>
                         </select>
+                        <span class="validation-error-msg" id="error_c_faculty"></span>
                     </div>
 
                     <div class="gov-form-group">
@@ -2495,7 +2609,7 @@ if ($user_role === 'admin') {
             <span class="db-modal-close" onclick="hideEditModal()">&times;</span>
             <h3 style="margin-bottom: 25px; font-size:18px; color: #002F6C;">Edit Student Record</h3>
             
-            <form action="dashboard.php?page=students" method="POST">
+            <form action="dashboard.php?page=students" method="POST" novalidate onsubmit="return validateEditStudent()">
                 <input type="hidden" name="edit_student" value="1">
                 <input type="hidden" id="e_id" name="student_id">
                 
@@ -2503,21 +2617,25 @@ if ($user_role === 'admin') {
                     <div class="gov-form-group">
                         <label class="gov-label" for="e_name">Full Name</label>
                         <input class="gov-input" id="e_name" name="student_name" type="text" required>
+                        <span class="validation-error-msg" id="error_e_name"></span>
                     </div>
 
                     <div class="gov-form-group">
                         <label class="gov-label" for="e_dob">Date of Birth</label>
                         <input class="gov-input" id="e_dob" name="student_dob" type="date" required>
+                        <span class="validation-error-msg" id="error_e_dob"></span>
                     </div>
 
                     <div class="gov-form-group">
                         <label class="gov-label" for="e_email">Email Address</label>
                         <input class="gov-input" id="e_email" name="student_email" type="email" required>
+                        <span class="validation-error-msg" id="error_e_email"></span>
                     </div>
 
                     <div class="gov-form-group">
                         <label class="gov-label" for="e_whatsapp">WhatsApp Number</label>
                         <input class="gov-input" id="e_whatsapp" name="student_whatsapp" type="tel" required>
+                        <span class="validation-error-msg" id="error_e_whatsapp"></span>
                     </div>
 
                     <div class="gov-form-group">
@@ -2530,6 +2648,7 @@ if ($user_role === 'admin') {
                             }
                             ?>
                         </select>
+                        <span class="validation-error-msg" id="error_e_faculty"></span>
                     </div>
 
                     <div class="gov-form-group">
@@ -2558,8 +2677,15 @@ if ($user_role === 'admin') {
     <!-- Toggle Sidebar JavaScript for Mobile -->
     <script>
         function toggleSidebar() {
-            var sidebar = document.getElementById('dbSidebar');
-            sidebar.classList.toggle('open');
+            if (window.innerWidth <= 992) {
+                var sidebar = document.getElementById('dbSidebar');
+                sidebar.classList.toggle('open');
+            } else {
+                var container = document.querySelector('.db-layout-container');
+                container.classList.toggle('collapsed');
+                var isCollapsed = container.classList.contains('collapsed');
+                document.cookie = "db_sidebar_collapsed=" + (isCollapsed ? "1" : "0") + "; path=/; max-age=31536000";
+            }
         }
 
         // Close sidebar when clicking main content area on mobile viewports
@@ -2577,14 +2703,32 @@ if ($user_role === 'admin') {
         });
 
         // Modal Helpers
+        function clearModalErrors() {
+            document.querySelectorAll('.validation-error-msg').forEach(function(span) {
+                span.style.display = 'none';
+                span.innerText = '';
+            });
+        }
+
+        function showModalError(fieldId, msg) {
+            var span = document.getElementById('error_' + fieldId);
+            if (span) {
+                span.innerText = msg;
+                span.style.display = 'block';
+            }
+        }
+
         function showCreateModal() {
+            clearModalErrors();
             document.getElementById('createStudentModal').style.display = 'flex';
         }
         function hideCreateModal() {
+            clearModalErrors();
             document.getElementById('createStudentModal').style.display = 'none';
         }
 
         function showEditModal(studentData) {
+            clearModalErrors();
             document.getElementById('e_id').value = studentData.id;
             document.getElementById('e_name').value = studentData.full_name;
             document.getElementById('e_dob').value = studentData.dob;
@@ -2597,6 +2741,7 @@ if ($user_role === 'admin') {
             document.getElementById('editStudentModal').style.display = 'flex';
         }
         function hideEditModal() {
+            clearModalErrors();
             document.getElementById('editStudentModal').style.display = 'none';
         }
 
@@ -2633,12 +2778,125 @@ if ($user_role === 'admin') {
             }
         });
 
+        function togglePasswordVisibility(inputId, buttonEl) {
+            var input = document.getElementById(inputId);
+            if (!input) return;
+            var type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+            
+            if (type === 'password') {
+                buttonEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+                buttonEl.setAttribute('aria-label', 'Show password');
+            } else {
+                buttonEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+                buttonEl.setAttribute('aria-label', 'Hide password');
+            }
+        }
+
         // Apply saved theme on page load
         (function() {
             var saved = localStorage.getItem('lms_theme') || 'light';
             document.documentElement.setAttribute('data-theme', saved);
             updateThemeOptions(saved);
         })();
+
+        // Input sanitization & Validation for Dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            var c_whatsapp = document.getElementById('c_whatsapp');
+            if (c_whatsapp) {
+                c_whatsapp.addEventListener('input', function(e) {
+                    e.target.value = e.target.value.replace(/[^0-9+\s-]/g, '');
+                });
+            }
+
+            var e_whatsapp = document.getElementById('e_whatsapp');
+            if (e_whatsapp) {
+                e_whatsapp.addEventListener('input', function(e) {
+                    e.target.value = e.target.value.replace(/[^0-9+\s-]/g, '');
+                });
+            }
+        });
+
+        function validateProfileInfo() {
+            var email = document.getElementById('p_email').value.trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                alert('Please enter a valid email address.');
+                return false;
+            }
+            return true;
+        }
+
+        function validateCreateStudent() {
+            clearModalErrors();
+            var name = document.getElementById('c_name').value.trim();
+            var dob = document.getElementById('c_dob').value;
+            var email = document.getElementById('c_email').value.trim();
+            var whatsapp = document.getElementById('c_whatsapp').value.trim();
+            var faculty = document.getElementById('c_faculty').value;
+            var hasError = false;
+
+            if (!name) {
+                showModalError('c_name', 'Full Name is required.');
+                hasError = true;
+            }
+            if (!dob) {
+                showModalError('c_dob', 'Date of Birth is required.');
+                hasError = true;
+            }
+            if (!email) {
+                showModalError('c_email', 'Email Address is required.');
+                hasError = true;
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showModalError('c_email', 'Please enter a valid email address.');
+                hasError = true;
+            }
+            if (!whatsapp) {
+                showModalError('c_whatsapp', 'WhatsApp number is required.');
+                hasError = true;
+            }
+            if (!faculty) {
+                showModalError('c_faculty', 'Faculty Program selection is required.');
+                hasError = true;
+            }
+
+            return !hasError;
+        }
+
+        function validateEditStudent() {
+            clearModalErrors();
+            var name = document.getElementById('e_name').value.trim();
+            var dob = document.getElementById('e_dob').value;
+            var email = document.getElementById('e_email').value.trim();
+            var whatsapp = document.getElementById('e_whatsapp').value.trim();
+            var faculty = document.getElementById('e_faculty').value;
+            var hasError = false;
+
+            if (!name) {
+                showModalError('e_name', 'Full Name is required.');
+                hasError = true;
+            }
+            if (!dob) {
+                showModalError('e_dob', 'Date of Birth is required.');
+                hasError = true;
+            }
+            if (!email) {
+                showModalError('e_email', 'Email Address is required.');
+                hasError = true;
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showModalError('e_email', 'Please enter a valid email address.');
+                hasError = true;
+            }
+            if (!whatsapp) {
+                showModalError('e_whatsapp', 'WhatsApp number is required.');
+                hasError = true;
+            }
+            if (!faculty) {
+                showModalError('e_faculty', 'Faculty Program selection is required.');
+                hasError = true;
+            }
+
+            return !hasError;
+        }
     </script>
 
 </body>

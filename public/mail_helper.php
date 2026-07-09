@@ -19,6 +19,7 @@ if (!function_exists('sendMailtrapEmail')) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Bypass SSL verification peer on Windows local environments
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             "Authorization: Bearer {$api_token}",
             "Content-Type: application/json"
@@ -26,6 +27,19 @@ if (!function_exists('sendMailtrapEmail')) {
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+        // Log details to email log file for debug
+        $log_dir = __DIR__ . '/uploads';
+        if (!file_exists($log_dir)) {
+            mkdir($log_dir, 0777, true);
+        }
+        if ($response === false) {
+            $err = curl_error($ch);
+            file_put_contents($log_dir . '/emails.txt', "Mailtrap cURL Failure: " . $err . "\n", FILE_APPEND);
+        } else {
+            file_put_contents($log_dir . '/emails.txt', "Mailtrap Response Code: " . $httpCode . ", Body: " . $response . "\n", FILE_APPEND);
+        }
+        
         curl_close($ch);
 
         return ($httpCode === 200);

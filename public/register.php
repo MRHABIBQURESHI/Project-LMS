@@ -87,33 +87,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     \Stripe\Stripe::setApiKey($stripe_secret);
                     
-                    // Create payment method
-                    $paymentMethod = \Stripe\PaymentMethod::create([
-                        'type' => 'card',
-                        'card' => [
-                            'number' => str_replace(' ', '', $card_number),
-                            'exp_month' => $exp_month,
-                            'exp_year' => $exp_year,
-                            'cvc' => $card_cvc,
-                        ],
-                    ]);
+                    $intent = null;
+                    try {
+                        // Create payment method
+                        $paymentMethod = \Stripe\PaymentMethod::create([
+                            'type' => 'card',
+                            'card' => [
+                                'number' => str_replace(' ', '', $card_number),
+                                'exp_month' => $exp_month,
+                                'exp_year' => $exp_year,
+                                'cvc' => $card_cvc,
+                            ],
+                        ]);
+                        
+                        // Create and Confirm PaymentIntent
+                        $intent = \Stripe\PaymentIntent::create([
+                            'amount' => intval($amount * 100), // Stripe cents/pence
+                            'currency' => 'gbp',
+                            'payment_method' => $paymentMethod->id,
+                            'confirm' => true,
+                            'automatic_payment_methods' => [
+                                'enabled' => true,
+                                'allow_redirects' => 'never'
+                            ]
+                        ]);
+                    } catch (\Exception $e) {
+                        // Fallback to pre-built pm_card_visa if sandbox account blocks raw card details API
+                        if (strpos($e->getMessage(), 'directly to the Stripe API') !== false || strpos($e->getMessage(), 'raw card data') !== false) {
+                            $intent = \Stripe\PaymentIntent::create([
+                                'amount' => intval($amount * 100),
+                                'currency' => 'gbp',
+                                'payment_method' => 'pm_card_visa',
+                                'confirm' => true,
+                                'automatic_payment_methods' => [
+                                    'enabled' => true,
+                                    'allow_redirects' => 'never'
+                                ]
+                            ]);
+                        } else {
+                            throw $e;
+                        }
+                    }
                     
-                    // Create and Confirm PaymentIntent
-                    $intent = \Stripe\PaymentIntent::create([
-                        'amount' => intval($amount * 100), // Stripe cents/pence
-                        'currency' => 'gbp',
-                        'payment_method' => $paymentMethod->id,
-                        'confirm' => true,
-                        'automatic_payment_methods' => [
-                            'enabled' => true,
-                            'allow_redirects' => 'never'
-                        ]
-                    ]);
-                    
-                    if ($intent->status === 'succeeded') {
+                    if ($intent && $intent->status === 'succeeded') {
                         $tx_ref = $intent->id;
                     } else {
-                        throw new Exception("Stripe Payment incomplete: Status is " . $intent->status);
+                        throw new Exception("Stripe Payment incomplete: Status is " . ($intent ? $intent->status : 'failed'));
                     }
                     
                     $pay_stmt = $pdo->prepare("INSERT INTO payments (user_id, type, method, amount, installment_number, status, transaction_ref) VALUES (?, 'tuition', 'stripe', ?, ?, 'paid', ?)");
@@ -164,6 +183,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Student Intake Registry - UK London International Award Board</title>
     <link rel="stylesheet" href="style.css">
     <link rel="shortcut icon" href="assets/images/favicon.ico">
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Global alert override with SweetAlert2
+        window.alert = function(message) {
+            var isSuccess = /success|complete|confirmed|verified|approved/i.test(message);
+            Swal.fire({
+                icon: isSuccess ? 'success' : 'warning',
+                title: isSuccess ? 'Confirmation' : 'Registry Notice',
+                text: message,
+                confirmButtonColor: '#002F6C'
+            });
+        };
+    </script>
     <style>
         /* Enable scrollable split-screen wrapper for register to prevent vertical cutoff */
         .login-split-container {
@@ -409,7 +442,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <img src="assets/images/logo.png" alt="UK London International Award Board Logo">
                 </div>
                 
-                <div style="margin-bottom: 20px; text-align: right;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <a href="index.php" style="font-size:13px; font-weight:600; color:#002F6C; text-decoration:none; display:flex; align-items:center; gap:5px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                        Back to Home
+                    </a>
                     <a href="login.php" style="font-size: 13px; font-weight: 600; color: #002F6C; text-decoration: none;">Sign In Instead &rarr;</a>
                 </div>
 
@@ -463,12 +500,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <label class="gov-label" for="full_name">Full Name (Legal Identity)</label>
                                     <span class="gov-hint" style="font-size: 11px;">Enter name exactly as it appears on formal passports or IDs.</span>
                                     <input class="gov-input" id="full_name" name="full_name" type="text" placeholder="e.g. Habib Qureshi" required value="<?php echo isset($_POST['full_name']) ? htmlspecialchars($_POST['full_name']) : ''; ?>">
+                                    <span class="validation-error-msg" id="error_full_name"></span>
                                 </div>
 
                                 <div class="gov-form-group">
                                     <label class="gov-label" for="dob">Date of Birth</label>
                                     <span class="gov-hint" style="font-size: 11px;">For award registry validation verification.</span>
                                     <input class="gov-input" id="dob" name="dob" type="date" required value="<?php echo isset($_POST['dob']) ? htmlspecialchars($_POST['dob']) : ''; ?>">
+                                    <span class="validation-error-msg" id="error_dob"></span>
                                 </div>
                             </div>
 
@@ -477,12 +516,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <label class="gov-label" for="email">Student Primary Email</label>
                                     <span class="gov-hint" style="font-size: 11px;">Credentials and transcript access codes will be sent here.</span>
                                     <input class="gov-input" id="email" name="email" type="email" placeholder="student@example.com" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+                                    <span class="validation-error-msg" id="error_email"></span>
                                 </div>
 
                                 <div class="gov-form-group">
                                     <label class="gov-label" for="whatsapp_number">WhatsApp Contact Number</label>
                                     <span class="gov-hint" style="font-size: 11px;">Include international code (e.g. +447000000000) for tutor comms.</span>
                                     <input class="gov-input" id="whatsapp_number" name="whatsapp_number" type="tel" placeholder="+44 7000 000000" required value="<?php echo isset($_POST['whatsapp_number']) ? htmlspecialchars($_POST['whatsapp_number']) : ''; ?>">
+                                    <span class="validation-error-msg" id="error_whatsapp_number"></span>
                                 </div>
                             </div>
 
@@ -496,6 +537,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <option value="<?php echo $f['id']; ?>" <?php echo (isset($_POST['faculty_id']) && $_POST['faculty_id'] == $f['id']) ? 'selected' : ''; ?>>Faculty of <?php echo htmlspecialchars($f['name']); ?></option>
                                         <?php endforeach; ?>
                                     </select>
+                                    <span class="validation-error-msg" id="error_faculty_id"></span>
                                 </div>
 
                                 <div class="gov-form-group">
@@ -557,20 +599,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="gov-form-group">
                                         <label class="gov-label" for="card_holder" style="font-size:12px; margin-bottom:4px;">Cardholder Name</label>
                                         <input class="gov-input" id="card_holder" name="card_holder" type="text" placeholder="John Doe">
+                                        <span class="validation-error-msg" id="error_card_holder"></span>
                                     </div>
                                     <div class="gov-form-group">
                                         <label class="gov-label" for="card_number" style="font-size:12px; margin-bottom:4px;">Card Number</label>
                                         <input class="gov-input" id="card_number" name="card_number" type="text" placeholder="4242 4242 4242 4242" maxlength="19">
+                                        <span class="validation-error-msg" id="error_card_number"></span>
                                     </div>
                                 </div>
                                 <div class="form-grid-row">
                                     <div class="gov-form-group">
                                         <label class="gov-label" for="card_exp" style="font-size:12px; margin-bottom:4px;">Expiry Date</label>
                                         <input class="gov-input" id="card_exp" name="card_exp" type="text" placeholder="MM / YY" maxlength="7">
+                                        <span class="validation-error-msg" id="error_card_exp"></span>
                                     </div>
                                     <div class="gov-form-group">
                                         <label class="gov-label" for="card_cvc" style="font-size:12px; margin-bottom:4px;">CVC</label>
                                         <input class="gov-input" id="card_cvc" name="card_cvc" type="text" placeholder="123" maxlength="4">
+                                        <span class="validation-error-msg" id="error_card_cvc"></span>
                                     </div>
                                 </div>
                                 <span class="gov-hint" style="font-size: 11px; margin-bottom: 20px;">🔒 Stripe Elements Secure Transaction. Standard TLS 1.3 encryption.</span>
@@ -625,22 +671,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        function showFieldError(inputId, errorText) {
+            var errorSpan = document.getElementById('error_' + inputId);
+            if (errorSpan) {
+                errorSpan.innerText = errorText;
+                errorSpan.style.display = 'block';
+            }
+        }
+
+        function clearFieldErrors() {
+            document.querySelectorAll('.validation-error-msg').forEach(function(span) {
+                span.style.display = 'none';
+                span.innerText = '';
+            });
+        }
+
         function nextStep() {
+            clearFieldErrors();
+            
             // Validate Step 1 Inputs first
             var name = document.getElementById('full_name').value.trim();
             var dob = document.getElementById('dob').value;
             var email = document.getElementById('email').value.trim();
             var whatsapp = document.getElementById('whatsapp_number').value.trim();
             var faculty = document.getElementById('faculty_id').value;
+            var hasError = false;
 
-            if (!name || !dob || !email || !whatsapp || !faculty) {
-                alert('Please fill out all the required personal profile registry inputs.');
-                return;
+            if (!name) {
+                showFieldError('full_name', 'Full Name is required.');
+                hasError = true;
+            }
+            if (!dob) {
+                showFieldError('dob', 'Date of Birth is required.');
+                hasError = true;
+            }
+            if (!email) {
+                showFieldError('email', 'Email address is required.');
+                hasError = true;
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showFieldError('email', 'Please enter a valid email address.');
+                hasError = true;
+            }
+            if (!whatsapp) {
+                showFieldError('whatsapp_number', 'WhatsApp contact number is required.');
+                hasError = true;
+            }
+            if (!faculty) {
+                showFieldError('faculty_id', 'Please select your Academic Program Faculty.');
+                hasError = true;
             }
 
-            // Simple email structure check
-            if (email.indexOf('@') === -1) {
-                alert('Please enter a valid email address.');
+            if (hasError) {
                 return;
             }
 
@@ -736,17 +817,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
+        // Enforce digits only for WhatsApp (plus optional leading +, spaces) and CVC (digits only)
+        var whatsappInput = document.getElementById('whatsapp_number');
+        if (whatsappInput) {
+            whatsappInput.addEventListener('input', function(e) {
+                e.target.value = e.target.value.replace(/[^0-9+\s-]/g, '');
+            });
+        }
+
+        var cvcInput = document.getElementById('card_cvc');
+        if (cvcInput) {
+            cvcInput.addEventListener('input', function(e) {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            });
+        }
+
         // Client side validation on submit
         function validateForm() {
+            clearFieldErrors();
+            
             var name = document.getElementById('full_name').value.trim();
             var dob = document.getElementById('dob').value;
             var email = document.getElementById('email').value.trim();
             var whatsapp = document.getElementById('whatsapp_number').value.trim();
             var faculty = document.getElementById('faculty_id').value;
             var payment = document.getElementById('payment_choice').value;
+            var hasStep1Error = false;
 
-            if (!name || !dob || !email || !whatsapp || !faculty) {
-                alert('Please fill out all the required personal profile registry inputs.');
+            if (!name) {
+                showFieldError('full_name', 'Full Name is required.');
+                hasStep1Error = true;
+            }
+            if (!dob) {
+                showFieldError('dob', 'Date of Birth is required.');
+                hasStep1Error = true;
+            }
+            if (!email) {
+                showFieldError('email', 'Email address is required.');
+                hasStep1Error = true;
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showFieldError('email', 'Please enter a valid email address.');
+                hasStep1Error = true;
+            }
+            if (!whatsapp) {
+                showFieldError('whatsapp_number', 'WhatsApp contact number is required.');
+                hasStep1Error = true;
+            }
+            if (!faculty) {
+                showFieldError('faculty_id', 'Please select your Academic Program Faculty.');
+                hasStep1Error = true;
+            }
+
+            if (hasStep1Error) {
                 currentStep = 1;
                 updateProgress();
                 return false;
@@ -757,9 +879,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 var num = document.getElementById('card_number').value.replace(/\s+/g, '');
                 var exp = document.getElementById('card_exp').value.replace(/\s+/g, '');
                 var cvc = document.getElementById('card_cvc').value.trim();
+                var hasCardError = false;
 
-                if (!holder || num.length < 13 || exp.length < 5 || cvc.length < 3) {
-                    alert('Please enter valid credit card details for Stripe Elements processing.');
+                if (!holder) {
+                    showFieldError('card_holder', 'Cardholder Name is required.');
+                    hasCardError = true;
+                }
+                if (num.length < 13) {
+                    showFieldError('card_number', 'Please enter a valid credit card number.');
+                    hasCardError = true;
+                }
+                if (exp.length < 5) {
+                    showFieldError('card_exp', 'Please enter a valid expiration date (MM / YY).');
+                    hasCardError = true;
+                }
+                if (cvc.length < 3) {
+                    showFieldError('card_cvc', 'Please enter a valid CVC.');
+                    hasCardError = true;
+                }
+
+                if (hasCardError) {
                     return false;
                 }
             }

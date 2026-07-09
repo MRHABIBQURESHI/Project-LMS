@@ -157,6 +157,21 @@ body {
     align-items: center;
 }
 
+/* Adjust brand logo alignment, spacing and sizing */
+.gov-header-container a[href="index.php"] {
+    gap: 6px !important;
+}
+
+.gov-header-container a[href="index.php"] img {
+    max-height: 52px !important;
+    transition: transform 0.2s ease;
+}
+
+.gov-header-container a[href="index.php"]:hover img {
+    transform: scale(1.03);
+}
+
+
 .gov-header-title {
     font-size: 20px;
     font-weight: 700;
@@ -181,13 +196,60 @@ body {
     text-decoration: none;
     font-weight: 500;
     font-size: 15px;
-    transition: opacity 0.2s;
+    transition: all 0.25s ease;
 }
 
 .gov-header-nav a:hover {
     opacity: 0.85;
     text-decoration: underline;
 }
+
+/* Styled button for Sign In & Dashboard */
+.gov-header-nav a[href="login.php"],
+.gov-header-nav a[href="dashboard.php"] {
+    background-color: #ffffff;
+    color: #002F6C !important;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 2px solid #ffffff;
+    display: inline-block;
+    line-height: 1.2;
+}
+
+.gov-header-nav a[href="login.php"]:hover,
+.gov-header-nav a[href="dashboard.php"]:hover {
+    background-color: #cba135; /* Premium gold on hover */
+    color: #ffffff !important;
+    border-color: #cba135;
+    text-decoration: none;
+    opacity: 1;
+    box-shadow: 0 4px 15px rgba(203, 161, 53, 0.3);
+}
+
+/* Styled outline button for Sign Out */
+.gov-header-nav a[href="logout.php"] {
+    background-color: transparent;
+    color: #ffffff !important;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 2px solid #ffffff;
+    display: inline-block;
+    line-height: 1.2;
+}
+
+.gov-header-nav a[href="logout.php"]:hover {
+    background-color: #ffffff;
+    color: #002F6C !important;
+    border-color: #ffffff;
+    text-decoration: none;
+    opacity: 1;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15);
+}
+
 
 /* Standardized Content Container */
 .gov-width-container {
@@ -508,12 +570,12 @@ a:hover {
 .login-right-panel {
     flex: 0 0 50%;
     max-width: 50%;
-    background-color: #f2f7fd;
+    background-color: #002F6C;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 40px;
-    border-left: 2px solid #EBF3FC;
+    border-left: none;
 }
 
 .login-card {
@@ -587,10 +649,14 @@ a:hover {
     background-color: var(--bg-secondary);
 }
 
+body.db-body {
+    padding-bottom: 0 !important;
+    background-color: var(--bg-secondary) !important;
+}
+
 .db-sidebar {
     width: 260px;
-    background-color: var(--bg-card);
-    border-right: 1.5px solid var(--border-main);
+    background-color: var(--bg-sidebar);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -598,7 +664,7 @@ a:hover {
     left: 0;
     top: 0;
     z-index: 99;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, width 0.3s ease;
 }
 
 .db-brand {
@@ -609,7 +675,6 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 10px;
-    border-bottom: 1.5px solid var(--border-main);
 }
 
 .db-brand-dot {
@@ -633,7 +698,8 @@ a:hover {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    color: var(--text-hint);
+    color: var(--text-sidebar);
+    opacity: 0.6;
     letter-spacing: 1px;
     margin: 15px 0 5px 10px;
 }
@@ -645,7 +711,7 @@ a:hover {
     padding: 12px 16px;
     font-size: 15px;
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-sidebar);
     text-decoration: none;
     border-radius: 8px;
     transition: all 0.25s ease;
@@ -653,19 +719,18 @@ a:hover {
 
 .db-nav-item a:hover {
     background-color: var(--nav-hover-bg);
-    color: var(--text-heading);
+    color: #ffffff;
 }
 
 .db-nav-item.active a {
     background-color: var(--nav-active-bg);
-    color: var(--text-heading);
+    color: #ffffff;
     font-weight: 600;
 }
 
 .db-sidebar-footer {
     padding: 20px;
-    border-top: 1.5px solid var(--border-main);
-    background-color: var(--bg-section);
+    background-color: rgba(0, 0, 0, 0.15);
 }
 
 .db-user-profile {
@@ -696,7 +761,7 @@ a:hover {
 .db-user-name {
     font-size: 14px;
     font-weight: 600;
-    color: var(--text-heading);
+    color: #ffffff !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -704,7 +769,7 @@ a:hover {
 
 .db-user-role {
     font-size: 11px;
-    color: var(--text-hint);
+    color: var(--text-sidebar);
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -716,13 +781,13 @@ a:hover {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    transition: margin-left 0.3s ease;
 }
 
 /* Topbar Header */
 .db-topbar {
     height: 70px;
-    background-color: var(--bg-topbar);
-    border-bottom: 1.5px solid var(--border-main);
+    background-color: var(--bg-sidebar);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -731,6 +796,20 @@ a:hover {
     top: 0;
     z-index: 98;
     transition: background-color 0.3s;
+}
+
+.db-topbar .theme-toggle-btn {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+}
+
+.db-topbar .theme-toggle-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: #ffffff !important;
+}
+
+.db-topbar .db-topbar-icon {
+    color: #ffffff !important;
 }
 
 .db-search-mock {
@@ -848,13 +927,13 @@ a:hover {
     margin-top: 2px;
 }
 
-/* Sidebar Toggle for Mobile */
+/* Sidebar Toggle for Mobile & Desktop collapse */
 .db-mobile-toggle {
-    display: none;
+    display: block; /* Always show the hamburger! */
     font-size: 24px;
     background: none;
     border: none;
-    color: var(--text-heading);
+    color: #ffffff;
     cursor: pointer;
     margin-right: 15px;
 }
@@ -868,10 +947,7 @@ a:hover {
         transform: translateX(0);
     }
     .db-main {
-        margin-left: 0;
-    }
-    .db-mobile-toggle {
-        display: block;
+        margin-left: 0 !important;
     }
 }
 
@@ -1512,5 +1588,98 @@ a:hover {
     max-width: 100% !important;
     width: 100% !important;
 }
+
+/* ====================================================================== */
+/* PASSWORD TOGGLE VISIBILITY WRAPPERS & CONTROLS                        */
+/* ====================================================================== */
+.pw-wrapper {
+    position: relative;
+    width: 100%;
+}
+.pw-wrapper .gov-input {
+    padding-right: 45px !important;
+}
+.pw-toggle-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    outline: none;
+    height: 32px;
+    width: 32px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+.pw-toggle-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+[data-theme="dark"] .pw-toggle-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+.pw-toggle-btn svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    stroke: var(--text-secondary);
+}
+
+/* Inline validation error formatting */
+.validation-error-msg {
+    color: #d4351c;
+    font-size: 12.5px;
+    font-weight: 600;
+    margin-top: 5px;
+    display: none;
+    line-height: 1.4;
+}
+
+/* Collapsed Sidebar Rules (Desktop viewports, > 992px) */
+@media (min-width: 993px) {
+    .db-layout-container.collapsed .db-sidebar {
+        width: 75px;
+    }
+    .db-layout-container.collapsed .db-main {
+        margin-left: 75px;
+    }
+    .db-layout-container.collapsed .db-brand span {
+        display: none;
+    }
+    .db-layout-container.collapsed .db-brand {
+        padding: 15px 0;
+        justify-content: center;
+    }
+    .db-layout-container.collapsed .db-nav-section-title {
+        display: none;
+    }
+    .db-layout-container.collapsed .db-nav-item a {
+        padding: 12px 0;
+        justify-content: center;
+    }
+    .db-layout-container.collapsed .db-nav-item .nav-text {
+        display: none;
+    }
+    .db-layout-container.collapsed .db-sidebar-footer {
+        padding: 20px 0;
+    }
+    .db-layout-container.collapsed .db-user-profile {
+        justify-content: center;
+    }
+    .db-layout-container.collapsed .db-user-info {
+        display: none;
+    }
+    .db-layout-container.collapsed .db-sidebar-footer .db-user-avatar {
+        margin: 0 auto;
+    }
+}
+
+
 
 

@@ -43,6 +43,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Forgot Password - UK London International Award Board</title>
     <link rel="stylesheet" href="style.css">
     <link rel="shortcut icon" href="assets/images/favicon.ico">
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Global alert override with SweetAlert2
+        window.alert = function(message) {
+            var isSuccess = /success|complete|confirmed|verified|approved/i.test(message);
+            Swal.fire({
+                icon: isSuccess ? 'success' : 'warning',
+                title: isSuccess ? 'Confirmation' : 'Registry Notice',
+                text: message,
+                confirmButtonColor: '#002F6C'
+            });
+        };
+    </script>
 </head>
 <body class="login-body">
 
@@ -56,6 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mobile-logo-header">
                     <img src="assets/images/logo.png" alt="UK London International Award Board Logo">
                 </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <a href="index.php" style="font-size:13px; font-weight:600; color:#002F6C; text-decoration:none; display:flex; align-items:center; gap:5px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                        Back to Home
+                    </a>
+                </div>
+
                 <h1 class="login-title" style="font-size: 24px;">Reset Password</h1>
                 <p style="font-size: 14px; margin-bottom: 20px; color: #555;">Enter your registered email address and we will generate a password reset verification link.</p>
 
@@ -77,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 <?php endif; ?>
 
-                <form action="forgot-password.php" method="POST" novalidate>
+                <form action="forgot-password.php" method="POST" novalidate onsubmit="return validateForgotPassword()">
                     <div class="gov-form-group">
                         <label class="gov-label" for="email">Email Address</label>
                         <input class="gov-input" id="email" name="email" type="email" autocomplete="email" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" placeholder="Enter registered email">
@@ -100,5 +122,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </div>
 
+    <script>
+        function validateForgotPassword() {
+            var email = document.getElementById('email').value.trim();
+            if (!email) {
+                alert('Please enter your registered email address.');
+                return false;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                alert('Please enter a valid email address.');
+                return false;
+            }
+            return true;
+        }
+    </script>
 </body>
 </html>

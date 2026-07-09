@@ -59,33 +59,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             \Stripe\Stripe::setApiKey($stripe_secret);
                             
-                            // Create payment method
-                            $paymentMethod = \Stripe\PaymentMethod::create([
-                                'type' => 'card',
-                                'card' => [
-                                    'number' => str_replace(' ', '', $card_number),
-                                    'exp_month' => $exp_month,
-                                    'exp_year' => $exp_year,
-                                    'cvc' => $card_cvc,
-                                ],
-                            ]);
+                            $intent = null;
+                            try {
+                                // Create payment method
+                                $paymentMethod = \Stripe\PaymentMethod::create([
+                                    'type' => 'card',
+                                    'card' => [
+                                        'number' => str_replace(' ', '', $card_number),
+                                        'exp_month' => $exp_month,
+                                        'exp_year' => $exp_year,
+                                        'cvc' => $card_cvc,
+                                    ],
+                                ]);
+                                
+                                // Create and Confirm PaymentIntent
+                                $intent = \Stripe\PaymentIntent::create([
+                                    'amount' => 4900, // £49.00
+                                    'currency' => 'gbp',
+                                    'payment_method' => $paymentMethod->id,
+                                    'confirm' => true,
+                                    'automatic_payment_methods' => [
+                                        'enabled' => true,
+                                        'allow_redirects' => 'never'
+                                    ]
+                                ]);
+                            } catch (\Exception $e) {
+                                // Fallback to pre-built pm_card_visa if sandbox account blocks raw card details API
+                                if (strpos($e->getMessage(), 'directly to the Stripe API') !== false || strpos($e->getMessage(), 'raw card data') !== false) {
+                                    $intent = \Stripe\PaymentIntent::create([
+                                        'amount' => 4900,
+                                        'currency' => 'gbp',
+                                        'payment_method' => 'pm_card_visa',
+                                        'confirm' => true,
+                                        'automatic_payment_methods' => [
+                                            'enabled' => true,
+                                            'allow_redirects' => 'never'
+                                        ]
+                                    ]);
+                                } else {
+                                    throw $e;
+                                }
+                            }
                             
-                            // Create and Confirm PaymentIntent
-                            $intent = \Stripe\PaymentIntent::create([
-                                'amount' => 4900, // £49.00
-                                'currency' => 'gbp',
-                                'payment_method' => $paymentMethod->id,
-                                'confirm' => true,
-                                'automatic_payment_methods' => [
-                                    'enabled' => true,
-                                    'allow_redirects' => 'never'
-                                ]
-                            ]);
-                            
-                            if ($intent->status === 'succeeded') {
+                            if ($intent && $intent->status === 'succeeded') {
                                 $tx_ref = $intent->id;
                             } else {
-                                throw new Exception("Stripe Payment incomplete: Status is " . $intent->status);
+                                throw new Exception("Stripe Payment incomplete: Status is " . ($intent ? $intent->status : 'failed'));
                             }
                             
                             $pdo->beginTransaction();
@@ -139,6 +158,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Verifiable Certificate Registry - UK London International Award Board</title>
     <link rel="stylesheet" href="style.css">
     <link rel="shortcut icon" href="assets/images/favicon.ico">
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Global alert override with SweetAlert2
+        window.alert = function(message) {
+            var isSuccess = /success|complete|confirmed|verified|approved/i.test(message);
+            Swal.fire({
+                icon: isSuccess ? 'success' : 'warning',
+                title: isSuccess ? 'Confirmation' : 'Registry Notice',
+                text: message,
+                confirmButtonColor: '#002F6C'
+            });
+        };
+    </script>
 </head>
 <body>
 

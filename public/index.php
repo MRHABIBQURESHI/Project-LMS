@@ -39,54 +39,66 @@ require_once __DIR__ . '/db.php';
         </div>
 
         <h2>Online Services & Portals</h2>
-        <div class="portal-card-grid">
+        <div class="gov-list-group">
             
-            <div class="portal-card">
+            <div class="gov-list-row">
                 <div>
-                    <div class="portal-card-title">📝 Student Registration</div>
-                    <div class="portal-card-desc">Enroll in faculties (Business, Health, Nutrition) and start coursework modules.</div>
+                    <span class="gov-list-key">Student Intake & Registration Portal</span>
+                    <span class="gov-hint" style="margin-top: 5px;">Enroll in faculties (Business, Health, Nutrition) and start coursework.</span>
                 </div>
-                <a href="register.php" class="portal-card-btn">Register now &rarr;</a>
+                <div class="gov-list-action">
+                    <a href="register.php">Register now</a>
+                </div>
             </div>
 
-            <div class="portal-card">
+            <div class="gov-list-row">
                 <div>
-                    <div class="portal-card-title">🖥️ Learning Terminal</div>
-                    <div class="portal-card-desc">Access modules, upload assignment files, sit timed exams, or perform grading audits.</div>
+                    <span class="gov-list-key">Student & Assessor Dashboard</span>
+                    <span class="gov-hint" style="margin-top: 5px;">Access learning modules, upload assignments, sit timed exams, or evaluate coursework.</span>
                 </div>
-                <a href="dashboard.php" class="portal-card-btn">Access dashboard &rarr;</a>
+                <div class="gov-list-action">
+                    <a href="dashboard.php">Access dashboard</a>
+                </div>
             </div>
 
-            <div class="portal-card">
+            <div class="gov-list-row">
                 <div>
-                    <div class="portal-card-title">🤝 Partner Onboarding</div>
-                    <div class="portal-card-desc">Apply to onboarding as local representative Batch Manager or Affiliate Consultant.</div>
+                    <span class="gov-list-key">Contact Us & Affiliate Onboarding</span>
+                    <span class="gov-hint" style="margin-top: 5px;">View office operating hours, contact numbers, or submit a consultant onboarding request.</span>
                 </div>
-                <a href="contact.php" class="portal-card-btn">Apply/Contact &rarr;</a>
+                <div class="gov-list-action">
+                    <a href="contact.php">Contact / Partner</a>
+                </div>
             </div>
 
-            <div class="portal-card">
+            <div class="gov-list-row">
                 <div>
-                    <div class="portal-card-title">💵 Cash Remittance Gate</div>
-                    <div class="portal-card-desc">Queue money order code confirmations (Western Union/Ria) to unlock account locks.</div>
+                    <span class="gov-list-key">Cash Remittance Verification Gate</span>
+                    <span class="gov-hint" style="margin-top: 5px;">Submit Western Union, WorldRemit, or Ria money transfer details to unlock your profile.</span>
                 </div>
-                <a href="remittance.php" class="portal-card-btn">Submit details &rarr;</a>
+                <div class="gov-list-action">
+                    <a href="remittance.php">Submit payment reference</a>
+                </div>
             </div>
 
-            <div class="portal-card">
+            <div class="gov-list-row">
                 <div>
-                    <div class="portal-card-title">📄 Terms & Conditions</div>
-                    <div class="portal-card-desc">Operational terms, fee structures, academic honesty policies, and institutional rules.</div>
+                    <span class="gov-list-key">Terms & Conditions</span>
+                    <span class="gov-hint" style="margin-top: 5px;">Read our operational terms, fees schedule, and institutional regulations.</span>
                 </div>
-                <a href="terms.php" class="portal-card-btn">View terms &rarr;</a>
+                <div class="gov-list-action">
+                    <a href="terms.php">View terms</a>
+                </div>
             </div>
 
-            <div class="portal-card">
+            <div class="gov-list-row">
                 <div>
-                    <div class="portal-card-title">🔒 Privacy & Data Policy</div>
-                    <div class="portal-card-desc">Directives regarding profiles logs, file integrity, and student records portability rights.</div>
+                    <span class="gov-list-key">Data Protection & Privacy Policy</span>
+                    <span class="gov-hint" style="margin-top: 5px;">Information on how we handle personal records, WhatsApp communications, and transcripts.</span>
                 </div>
-                <a href="privacy.php" class="portal-card-btn">View privacy policy &rarr;</a>
+                <div class="gov-list-action">
+                    <a href="privacy.php">View privacy policy</a>
+                </div>
             </div>
 
         </div>

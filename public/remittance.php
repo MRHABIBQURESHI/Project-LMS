@@ -122,91 +122,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <main class="gov-width-container">
         <div class="gov-grid-row">
-            <div class="gov-grid-column-two-thirds" style="margin: 0 auto; float: none;">
+            <div class="gov-grid-column-two-thirds">
 
                 <?php if ($success): ?>
-                    <div class="legal-card" style="margin-top: 30px; border-top: 4px solid #00703c;">
-                        <div class="gov-success-banner" style="margin-bottom: 20px; border-radius: 6px;">
-                            <div class="gov-success-title">Reference Registered</div>
-                            <p style="font-size:13px; font-weight:600; margin-bottom:0; color:#00703c;">Your manual cash remittance details have been queued for administrative verification.</p>
-                        </div>
-
-                        <h1 style="margin-top: 0; font-size: 24px;">Awaiting Verification</h1>
-                        <p style="font-size:14px; color:var(--text-secondary); line-height:1.5; margin-bottom: 20px;">The administrative assessors will verify your transaction reference code against our ledger records. Please allow up to 48 hours for verification.</p>
-
-                        <?php if (!empty($generated_password)): ?>
-                            <div style="background-color: #fafcff; padding: 20px; border-left: 4px solid #002F6C; border-radius: 6px; border: 1.5px solid #EBF3FC; border-left-width: 5px; margin-bottom: 25px;">
-                                <h3 style="color:#002F6C; font-size:14px; margin-bottom:8px;">Your Student Portal Credentials</h3>
-                                <p style="font-size: 13px; color:var(--text-primary); margin-bottom: 8px;"><strong>Email Address:</strong> <code><?php echo htmlspecialchars($linked_email); ?></code></p>
-                                <p style="font-size: 13px; color:var(--text-primary); margin-bottom: 0;"><strong>Temporary Password:</strong> <code><?php echo htmlspecialchars($generated_password); ?></code></p>
-                            </div>
-                        <?php endif; ?>
-
-                        <a href="login.php" class="gov-button" style="border-radius: 6px; padding: 12px 30px;">Go to Sign In &rarr;</a>
+                    <div class="gov-success-banner">
+                        <div class="gov-success-title">Reference Registered</div>
+                        <p>Your manual cash remittance details have been queued for admin verification. Your account status is now pending manual unlock.</p>
                     </div>
+
+                    <h1>Awaiting Verification</h1>
+                    <p>The administrative assessors will verify your transaction reference code against our ledger records. Please allow up to 48 hours for verification.</p>
+
+                    <?php if (!empty($generated_password)): ?>
+                        <div style="background-color: #fafcff; padding: 25px; border-left: 5px solid #002F6C; margin-bottom: 30px;">
+                            <h3 style="color:#002F6C; margin-bottom:10px;">Your Portal Login Credentials</h3>
+                            <p style="font-size: 16px; margin-bottom: 5px;">Write these down to login once approved:</p>
+                            <p style="font-size: 19px; margin-bottom: 10px;"><strong>Email:</strong> <code><?php echo htmlspecialchars($linked_email); ?></code></p>
+                            <p style="font-size: 19px; margin-bottom: 0;"><strong>Password:</strong> <code><?php echo htmlspecialchars($generated_password); ?></code></p>
+                        </div>
+                    <?php endif; ?>
+
+                    <a href="login.php" class="gov-button">Go to Sign In</a>
 
                 <?php else: ?>
 
-                    <div class="legal-card" style="margin-top: 30px;">
-                        <h1 style="margin-top: 0;">Manual Cash Remittance Gate</h1>
-                        <p style="font-size:14px; color:var(--text-secondary); margin-bottom: 25px; line-height:1.45;">Provide the reference key, sender name, and transfer service provider details to queue your student account for manual verification and unlock.</p>
+                    <h1>Manual Cash Remittance Gate</h1>
+                    <p>Provide the reference key, sender name, and transfer service provider details to queue your student account for manual verification and unlock.</p>
 
-                        <?php if (!empty($error)): ?>
-                            <div class="gov-error-banner" style="padding: 10px 15px; margin-bottom: 20px; border-radius: 6px; word-break: break-word; overflow-wrap: break-word;">
-                                <p style="font-size: 13px; margin-bottom: 0; color:#d4351c; font-weight: 600;"><?php echo htmlspecialchars($error); ?></p>
+                    <?php if (!empty($error)): ?>
+                        <div class="gov-error-banner">
+                            <div class="gov-error-title">There is a problem</div>
+                            <p><?php echo htmlspecialchars($error); ?></p>
+                        </div>
+                    <?php endif; ?>
+
+                    <form action="remittance.php" method="POST" novalidate>
+                        
+                        <?php if ($user_id === 0): ?>
+                            <div class="gov-form-group">
+                                <label class="gov-label" for="email">Student Registered Email</label>
+                                <span class="gov-hint">Enter the email you registered on Page 2 (Registration portal).</span>
+                                <input class="gov-input" id="email" name="email" type="email" required>
+                            </div>
+                        <?php else: ?>
+                            <div style="background-color: #fafcff; padding: 15px; border-left: 5px solid #002F6C; margin-bottom: 25px;">
+                                Linking payment reference for student: <strong><?php echo htmlspecialchars($linked_email); ?></strong>
                             </div>
                         <?php endif; ?>
 
-                        <form action="remittance.php" method="POST" novalidate>
-                            
-                            <?php if ($user_id === 0): ?>
-                                <div class="gov-form-group">
-                                    <label class="gov-label" for="email">Student Registered Email</label>
-                                    <span class="gov-hint">Enter the email you registered on the Student Intake portal.</span>
-                                    <input class="gov-input" id="email" name="email" type="email" style="max-width: 100%; width: 100%;" required>
-                                </div>
-                            <?php else: ?>
-                                <div style="background-color: #fafcff; padding: 12px 16px; border-left: 4px solid #002F6C; border-radius: 6px; border: 1.5px solid #EBF3FC; border-left-width: 5px; font-size:13px; margin-bottom: 20px;">
-                                    Linking payment reference for student: <strong><?php echo htmlspecialchars($linked_email); ?></strong>
-                                </div>
-                            <?php endif; ?>
+                        <div class="gov-form-group">
+                            <label class="gov-label" for="sender_name">Sender name</label>
+                            <span class="gov-hint">Enter the full name of the person who sent the funds.</span>
+                            <input class="gov-input" id="sender_name" name="sender_name" type="text" required>
+                        </div>
 
-                            <div class="form-grid-row">
-                                <div class="gov-form-group">
-                                    <label class="gov-label" for="sender_name">Sender name</label>
-                                    <span class="gov-hint">Enter the full name of the sender.</span>
-                                    <input class="gov-input" id="sender_name" name="sender_name" type="text" required>
-                                </div>
+                        <div class="gov-form-group">
+                            <label class="gov-label" for="method">Transfer Service Provider</label>
+                            <span class="gov-hint">Select the cash remittance company.</span>
+                            <select class="gov-select" id="method" name="method" required>
+                                <option value="">-- Choose Provider --</option>
+                                <option value="western_union">Western Union</option>
+                                <option value="ria">Ria Money Transfer</option>
+                                <option value="worldremit">WorldRemit</option>
+                            </select>
+                        </div>
 
-                                <div class="gov-form-group">
-                                    <label class="gov-label" for="amount">Remittance Amount ($)</label>
-                                    <span class="gov-hint">The default registration fee is $450.00.</span>
-                                    <input class="gov-input" id="amount" name="amount" type="number" step="0.01" min="1.00" value="450.00" required>
-                                </div>
-                            </div>
+                        <div class="gov-form-group">
+                            <label class="gov-label" for="transaction_ref">Transaction Reference ID (MTCN)</label>
+                            <span class="gov-hint">Enter the 8 or 10-digit number from your remittance slip.</span>
+                            <input class="gov-input" id="transaction_ref" name="transaction_ref" type="text" required>
+                        </div>
 
-                            <div class="form-grid-row">
-                                <div class="gov-form-group">
-                                    <label class="gov-label" for="method">Transfer Service Provider</label>
-                                    <span class="gov-hint">Select the cash remittance company.</span>
-                                    <select class="gov-select" id="method" name="method" required>
-                                        <option value="">-- Choose Provider --</option>
-                                        <option value="western_union">Western Union</option>
-                                        <option value="ria">Ria Money Transfer</option>
-                                        <option value="worldremit">WorldRemit</option>
-                                    </select>
-                                </div>
+                        <div class="gov-form-group">
+                            <label class="gov-label" for="amount">Remittance Amount ($)</label>
+                            <span class="gov-hint">The default program registration fee is $450.00.</span>
+                            <input class="gov-input" id="amount" name="amount" type="number" step="0.01" min="1.00" value="450.00" required>
+                        </div>
 
-                                <div class="gov-form-group">
-                                    <label class="gov-label" for="transaction_ref">Reference ID (MTCN / PIN)</label>
-                                    <span class="gov-hint">Enter the reference code from the receipt.</span>
-                                    <input class="gov-input" id="transaction_ref" name="transaction_ref" type="text" required>
-                                </div>
-                            </div>
-
-                            <button type="submit" class="gov-button" style="width: 100%; border-radius: 6px; padding: 13px; font-size:15px; margin-top: 15px;">Submit Remittance Codes &rarr;</button>
-                        </form>
-                    </div>
+                        <button type="submit" class="gov-button">Submit remittance codes</button>
+                    </form>
 
                 <?php endif; ?>
 
