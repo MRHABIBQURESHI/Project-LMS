@@ -1,0 +1,18 @@
+========================================
+To: abdulhaqabbasi12365@gmail.com
+Subject: Welcome to UK London International Award Board - Portal Access
+Date: 2026-07-09 22:32:38
+Body:
+Dear Abdul-Haq,
+
+Your enrollment is confirmed! Your student account is now active.
+
+Login Credentials:
+URL: http://127.0.0.1:8000/login.php
+Email: abdulhaqabbasi12365@gmail.com
+Password: 4ClhOiZfYD
+
+Sincerely,
+UK London International Award Board Assessor Services
+========================================
+
