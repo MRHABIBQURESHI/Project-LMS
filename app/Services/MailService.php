@@ -1,18 +1,29 @@
 <?php
-require_once __DIR__ . '/db.php';
 
-if (!function_exists('sendMailtrapEmail')) {
-    function sendMailtrapEmail($to, $subject, $body_text) {
+namespace App\Services;
+
+class MailService
+{
+    /**
+     * Send simulated email via Mailtrap API.
+     *
+     * @param string $to
+     * @param string $subject
+     * @param string $bodyText
+     * @return bool
+     */
+    public function sendMailtrapEmail($to, $subject, $bodyText)
+    {
         $sandbox_id = getenv('MAILTRAP_INBOX_ID') ?: '4763995';
         $api_token = getenv('MAILTRAP_TOKEN') ?: 'cd9fda3ed30ebcbd5ca752147ae0d539';
 
         $url = "https://sandbox.api.mailtrap.io/api/send/{$sandbox_id}";
 
         $data = [
-            "from" => ["email" => "registry@liab-edu.org", "name" => "UK London International Award Board"],
+            "from" => ["email" => "registry@cpduk.london", "name" => "CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD"],
             "to" => [["email" => $to]],
             "subject" => $subject,
-            "text" => $body_text
+            "text" => $bodyText
         ];
 
         $ch = curl_init($url);
@@ -29,7 +40,7 @@ if (!function_exists('sendMailtrapEmail')) {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         
         // Log details to email log file for debug
-        $log_dir = __DIR__ . '/uploads';
+        $log_dir = public_path('uploads');
         if (!file_exists($log_dir)) {
             mkdir($log_dir, 0777, true);
         }

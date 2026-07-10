@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Traits\StoreFileTrait;
 
-class SettingsController extends Controller
+class SettingController extends Controller
 {
     use StoreFileTrait;
 

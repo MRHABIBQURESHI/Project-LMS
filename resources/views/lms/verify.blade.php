@@ -1,51 +1,9 @@
-<?php
-require_once __DIR__ . '/db.php';
-
-$success = false;
-$error = '';
-$search_performed = false;
-$cert_uid = '';
-$result = null;
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $cert_uid = strtoupper(trim($_POST['cert_uid'] ?? ''));
-    
-    if (empty($cert_uid)) {
-        $error = 'Please enter a Certificate Serial ID.';
-    } else {
-        try {
-            $stmt = $pdo->prepare("
-                SELECT c.*, u.full_name, f.name as course_title 
-                FROM certificates c 
-                JOIN users u ON c.user_id = u.id 
-                LEFT JOIN faculties f ON COALESCE(c.course_id, u.faculty_id) = f.id 
-                WHERE c.certificate_uid = ?
-            ");
-            $stmt->execute([$cert_uid]);
-            $result = $stmt->fetch();
-            $search_performed = true;
-            
-            if ($result) {
-                if ($result['verification_status'] === 'approved') {
-                    $success = true;
-                } else {
-                    $error = 'This certificate has been revoked or invalidated.';
-                }
-            } else {
-                $error = 'No certificate record found with the specified Serial ID.';
-            }
-        } catch (PDOException $e) {
-            $error = 'Database connection error: ' . $e->getMessage();
-        }
-    }
-}
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Official Certificate Registry Verification - UK London International Award Board</title>
+    <title>Official Certificate Registry Verification - CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD</title>
     <!-- Modern Premium Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -398,10 +356,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             width: 100%;
             padding: 30px;
             text-align: center;
-            font-size: 12px;
-            color: var(--text-secondary);
             border-top: 1px solid var(--border-color);
-            max-width: 1200px;
+            margin-top: auto;
+        }
+
+        .footer p {
+            font-size: 13px;
+            color: var(--text-secondary);
         }
 
         @keyframes slideUp {
@@ -423,120 +384,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 opacity: 1;
             }
         }
-
-        @media (max-width: 480px) {
-            .card {
-                padding: 25px;
-            }
-            h1 {
-                font-size: 24px;
-            }
-            .result-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 5px;
-            }
-            .result-val {
-                text-align: left;
-            }
-        }
     </style>
 </head>
 <body>
 
+    <!-- Header Section -->
     <header class="header">
-        <a href="index.php" class="header-logo">
-            <img src="assets/images/logo.png" alt="Logo">
-            <span class="header-title">UK London International Award Board</span>
+        <a href="{{ route('lms.home') }}" class="header-logo">
+            <img src="{{ asset('assets/images/logo.png') }}" alt="Board Logo">
+            <span class="header-title">CPD UK LONDON | CERTIFICATE REGISTRY</span>
         </a>
-        <a href="login.php" class="nav-link">Sign In</a>
+        <a href="{{ route('lms.home') }}" class="nav-link">Portal Home</a>
     </header>
 
-    <main class="main-container">
+    <!-- Main Container -->
+    <div class="main-container">
+        
         <div class="card">
             <div class="card-header-accent"></div>
-            <h1>Academic Award Verification</h1>
-            <p class="description">Verify the authenticity of qualifications, degrees, and certificates issued by the UK London International Award Board registry.</p>
-
-            <form action="verify" method="POST">
-                <div class="form-group">
-                    <label class="input-label" for="cert_uid">Certificate Serial ID</label>
-                    <div class="input-wrapper">
-                        <input class="input-field" id="cert_uid" name="cert_uid" type="text" placeholder="REG-LDN-YYYY-NNNNN" required autocomplete="off" value="<?php echo htmlspecialchars($cert_uid); ?>">
-                    </div>
-                    <span class="hint">Format example: REG-LDN-2026-00001</span>
-                </div>
-
-                <button type="submit" class="btn-submit">Verify Credentials</button>
-            </form>
-
-            <?php if ($search_performed || !empty($error)): ?>
-                <div class="result-container">
-                    <?php if ($success && $result): ?>
-                        <div class="result-title">
-                            Verification Successful
-                            <span class="status-badge valid">VALID</span>
+            
+            @if (!$search_performed)
+                <h1>Official Credential Registry</h1>
+                <p class="description">Verify the matriculation, evaluation records, and authenticity of certificate awards issued by the CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD registry ledger.</p>
+                
+                <form action="{{ route('lms.verify') }}" method="POST">
+                    @csrf
+                    <div class="form-group">
+                        <label class="input-label" for="cert_uid">Certificate Serial ID</label>
+                        <div class="input-wrapper">
+                            <input class="input-field" type="text" name="cert_uid" id="cert_uid" placeholder="REG-LDN-2026-00001" required style="text-transform: uppercase;">
                         </div>
-                        <ul class="result-list">
-                            <li class="result-item">
-                                <span class="result-label">Student:</span>
-                                <span class="result-val"><?php echo htmlspecialchars($result['full_name']); ?></span>
-                            </li>
-                            <li class="result-item">
-                                <span class="result-label">Course:</span>
-                                <span class="result-val"><?php echo htmlspecialchars($result['course_title'] ?: 'General Program'); ?></span>
-                            </li>
-                            <li class="result-item">
-                                <span class="result-label">Issue Date:</span>
-                                <span class="result-val"><?php echo date('d F Y', strtotime($result['issue_date'])); ?></span>
-                            </li>
-                            <li class="result-item">
-                                <span class="result-label">Status:</span>
-                                <span class="result-val status-text valid">VALID</span>
-                            </li>
-                        </ul>
-                    <?php else: ?>
+                        <small class="hint">Formatting example: REG-LDN-[YEAR]-[SERIAL]</small>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">Query Ledger Registry</button>
+                </form>
+            @else
+                @if ($success)
+                    <h1>Award Verification Status</h1>
+                    <p class="description">Registry database record verified. The following qualification award has been validated under the public board ledger.</p>
+                    
+                    <div class="result-container">
                         <div class="result-title">
-                            Verification Result
-                            <span class="status-badge invalid">INVALID</span>
+                            <span>Ledger Status</span>
+                            <span class="status-badge valid">Verified Active</span>
                         </div>
                         
-                        <?php if ($result): ?>
-                            <!-- Revoked/Invalid Certificate Details -->
-                            <ul class="result-list" style="opacity: 0.6; margin-bottom: 20px;">
-                                <li class="result-item">
-                                    <span class="result-label">Student:</span>
-                                    <span class="result-val"><?php echo htmlspecialchars($result['full_name']); ?></span>
-                                </li>
-                                <li class="result-item">
-                                    <span class="result-label">Course:</span>
-                                    <span class="result-val"><?php echo htmlspecialchars($result['course_title'] ?: 'General Program'); ?></span>
-                                </li>
-                                <li class="result-item">
-                                    <span class="result-label">Issue Date:</span>
-                                    <span class="result-val"><?php echo date('d F Y', strtotime($result['issue_date'])); ?></span>
-                                </li>
-                                <li class="result-item">
-                                    <span class="result-label">Status:</span>
-                                    <span class="result-val status-text invalid">INVALID</span>
-                                </li>
-                            </ul>
-                        <?php endif; ?>
-
-                        <div class="banner-msg error">
-                            <strong>Status: INVALID</strong><br>
-                            <?php echo htmlspecialchars($error ?: 'No valid certificate matches this Serial ID.'); ?>
+                        <ul class="result-list">
+                            <li class="result-item">
+                                <span class="result-label">Candidate Name</span>
+                                <span class="result-val">{{ $result['full_name'] }}</span>
+                            </li>
+                            <li class="result-item">
+                                <span class="result-label">Award Qualification Focus</span>
+                                <span class="result-val">{{ $result['course_title'] }}</span>
+                            </li>
+                            <li class="result-item">
+                                <span class="result-label">Verifiable Reference ID</span>
+                                <span class="result-val highlight">{{ $result['certificate_uid'] }}</span>
+                            </li>
+                            <li class="result-item">
+                                <span class="result-label">Registry Ledger Status</span>
+                                <span class="result-val status-text valid">APPROVED</span>
+                            </li>
+                            <li class="result-item">
+                                <span class="result-label">Registry Issue Date</span>
+                                <span class="result-val">{{ $result['issue_date'] }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <a href="{{ route('lms.verify') }}" class="btn-reset">Validate Another Credential</a>
+                @else
+                    <h1>Registry Lookup Failed</h1>
+                    <p class="description">The query did not yield a valid matriculation award match in the public certificate registry ledger.</p>
+                    
+                    <div class="banner-msg error">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        <div>
+                            <strong>Registry Error:</strong> {{ $error }}
                         </div>
-                    <?php endif; ?>
-
-                    <a href="verify" class="btn-reset">&larr; Verify Another Certificate</a>
-                </div>
-            <?php endif; ?>
+                    </div>
+                    
+                    <a href="{{ route('lms.verify') }}" class="btn-reset">Return to Verification Portal</a>
+                @endif
+            @endif
+            
         </div>
-    </main>
+        
+    </div>
 
+    <!-- Footer Section -->
     <footer class="footer">
-        &copy; <?php echo date('Y'); ?> UK London International Award Board. All rights reserved. Registered Educational Awarding Body.
+        <p>&copy; 2026 CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD. All rights reserved.</p>
     </footer>
 
 </body>
