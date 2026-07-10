@@ -19,10 +19,11 @@
             </a>
             <div class="gov-header-nav">
                 @if (session()->has('user_id'))
-                    <a href="{{ route('lms.dashboard') }}">Dashboard</a>
-                    <a href="{{ route('lms.logout') }}">Sign out</a>
+                    <a href="{{ route('lms.dashboard') }}" class="nav-btn-primary">Dashboard</a>
+                    <a href="{{ route('lms.logout') }}" class="nav-btn-outline">Sign out</a>
                 @else
-                    <a href="{{ route('lms.login') }}">Sign in</a>
+                    <a href="{{ route('lms.register') }}" class="nav-btn-outline">Sign up</a>
+                    <a href="{{ route('lms.login') }}" class="nav-btn-primary">Sign in</a>
                 @endif
             </div>
         </div>

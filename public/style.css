@@ -205,8 +205,7 @@ body {
 }
 
 /* Styled button for Sign In & Dashboard */
-.gov-header-nav a[href="login.php"],
-.gov-header-nav a[href="dashboard.php"] {
+.gov-header-nav .nav-btn-primary {
     background-color: #ffffff;
     color: #002F6C !important;
     padding: 8px 20px;
@@ -216,11 +215,11 @@ body {
     border: 2px solid #ffffff;
     display: inline-block;
     line-height: 1.2;
+    transition: all 0.25s ease;
 }
 
-.gov-header-nav a[href="login.php"]:hover,
-.gov-header-nav a[href="dashboard.php"]:hover {
-    background-color: #cba135; /* Premium gold on hover */
+.gov-header-nav .nav-btn-primary:hover {
+    background-color: #cba135;
     color: #ffffff !important;
     border-color: #cba135;
     text-decoration: none;
@@ -229,19 +228,20 @@ body {
 }
 
 /* Styled outline button for Sign Out */
-.gov-header-nav a[href="logout.php"] {
+.gov-header-nav .nav-btn-outline {
     background-color: transparent;
     color: #ffffff !important;
     padding: 8px 20px;
     border-radius: 6px;
     font-weight: 600;
     text-decoration: none;
-    border: 2px solid #ffffff;
+    border: 2px solid rgba(255,255,255,0.6);
     display: inline-block;
     line-height: 1.2;
+    transition: all 0.25s ease;
 }
 
-.gov-header-nav a[href="logout.php"]:hover {
+.gov-header-nav .nav-btn-outline:hover {
     background-color: #ffffff;
     color: #002F6C !important;
     border-color: #ffffff;
