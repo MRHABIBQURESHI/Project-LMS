@@ -67,8 +67,8 @@
 
             <div style="margin-top: 30px; border-top: 1px solid #EBF3FC; padding-top: 20px; font-size: 12px; color: #777; line-height: 1.5;">
                 <strong>Demo Accounts:</strong><br>
-                - Admin: <code>mr.habib477@gmail.com</code> / <code>1234567890</code><br>
-                - Student: <code>mr.habib4777@gmail.com</code> / <code>1234567890</code>
+                - Admin: <code>admin@mail.com</code> / <code>1234567890</code><br>
+                - Student: <code>student@mail.com</code> / <code>1234567890</code>
             </div>
 
         </div>
