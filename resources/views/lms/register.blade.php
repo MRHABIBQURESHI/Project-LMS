@@ -9,6 +9,8 @@
 @endsection
 
 @section('head_extra')
+<!-- intl-tel-input CDN CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
 <!-- SweetAlert2 CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -182,12 +184,20 @@
         max-width: 100% !important;
         width: 100% !important;
         height: 36px !important;
-        padding: 7px 11px !important;
         font-size: 13px !important;
         border-radius: 6px;
         border: 1.5px solid #dbe4ef;
         background: #fafcfe;
         transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .login-card .gov-input:not(#whatsapp_number),
+    .login-card .gov-select {
+        padding: 7px 11px !important;
+    }
+    .login-card #whatsapp_number {
+        padding-top: 7px !important;
+        padding-bottom: 7px !important;
+        padding-right: 11px !important;
     }
     .login-card .gov-input:focus,
     .login-card .gov-select:focus {
@@ -254,6 +264,15 @@
             grid-template-columns: 1fr;
         }
         .login-card { padding: 24px 18px !important; }
+    }
+    .iti {
+        width: 100% !important;
+        display: block !important;
+    }
+    .iti__country-list {
+        z-index: 100 !important;
+        color: #222 !important;
+        text-align: left !important;
     }
 </style>
 @endsection
@@ -459,17 +478,102 @@
         </div>
     </div>
 
-    <!-- Right Panel: Decorative Illustration (Hidden on mobile) -->
-    <div class="login-right-panel">
-        <img class="login-illustration-img" src="{{ asset('assets/images/logo.png') }}" alt="CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD Logo">
+    <!-- Right Panel: Sidebar with Benefits -->
+    <div class="login-right-panel" style="display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 50px 60px; color: #ffffff; overflow-y: auto;">
+        <div style="max-width: 540px; margin: 0 auto; width: 100%;">
+            <!-- Header Section -->
+            <h2 style="font-size: 28px; font-weight: 800; color: #ffffff; margin-bottom: 8px; line-height: 1.25; letter-spacing: -0.5px;">The Fast Track to Your UK Board Seat</h2>
+            <p style="font-size: 15px; color: #c0d3e9; margin-bottom: 30px; font-weight: 500; line-height: 1.4;">Get certified in 60 hours without the institutional price tag.</p>
+            
+            <!-- Bullet Details List -->
+            <ul style="list-style: none; padding: 0; margin: 0 0 35px 0;">
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
+                    <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
+                    <span><strong>Save £15K+:</strong> Skip traditional £17,000–£29,000 tuition fees.</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
+                    <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
+                    <span><strong>60-Hour Curriculum:</strong> Fast-track, independent assessment model.</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
+                    <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
+                    <span><strong>Global Access:</strong> Open to UK (16+) and international applicants (18+).</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
+                    <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
+                    <span><strong>Flexible Payments:</strong> Only £2,249 full price, or 3 installments of £749.</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
+                    <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
+                    <span><strong>Effortless Testing:</strong> Simple portfolio evaluation and 2-hour digital exam.</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
+                    <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
+                    <span><strong>University Gateway:</strong> Optional premium UK university placement concierge.</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
+                    <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
+                    <span><strong>Instant Verification:</strong> Globally archived public registry lookup.</span>
+                </li>
+            </ul>
+
+            <!-- Highlighted Board Benefits Box -->
+            <div style="background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 22px 26px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); position: relative; overflow: hidden;">
+                <h3 style="font-size: 18px; font-weight: 700; color: #ffffff; margin-top: 0; margin-bottom: 14px; letter-spacing: 0.5px;">Board Benefits</h3>
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 13px; line-height: 1.4; color: #e2eefb;">
+                        <span style="color: #f3d078; font-weight: bold;">✔</span>
+                        <span>Official Global Credential Archival</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 13px; line-height: 1.4; color: #e2eefb;">
+                        <span style="color: #f3d078; font-weight: bold;">✔</span>
+                        <span>Secure 2-Hour Timed Assessment Gate</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0; font-size: 13px; line-height: 1.4; color: #e2eefb;">
+                        <span style="color: #f3d078; font-weight: bold;">✔</span>
+                        <span>Instant Public Registry Serialization Lookup</span>
+                    </li>
+                </ul>
+                <div style="position: absolute; bottom: 12px; right: 15px; opacity: 0.25; font-size: 24px; color: #fff;">✦</div>
+            </div>
+        </div>
     </div>
 
 </div>
 @endsection
 
 @section('scripts_extra')
+<!-- intl-tel-input CDN JS -->
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
 <script>
     var currentStep = 1;
+    
+    // Initialize intl-tel-input
+    var whatsappInput = document.getElementById('whatsapp_number');
+    var iti = window.intlTelInput(whatsappInput, {
+        initialCountry: "gb",
+        preferredCountries: ["gb", "us", "pk", "ae"],
+        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
+        autoInsertDialCode: true,
+        nationalMode: false
+    });
+
+    whatsappInput.addEventListener("countrychange", function() {
+        var countryData = iti.getSelectedCountryData();
+        if (countryData && countryData.dialCode) {
+            whatsappInput.value = "+" + countryData.dialCode + " ";
+        }
+    });
+
+    // Prefill dial code on load if empty
+    if (!whatsappInput.value.trim()) {
+        setTimeout(function() {
+            var countryData = iti.getSelectedCountryData();
+            if (countryData && countryData.dialCode) {
+                whatsappInput.value = "+" + countryData.dialCode + " ";
+            }
+        }, 100);
+    }
 
     function updateProgress() {
         var barLine = document.getElementById('barLine');
@@ -534,6 +638,11 @@
         if (!whatsapp) {
             showFieldError('whatsapp_number', 'WhatsApp contact number is required.');
             hasError = true;
+        } else if (!iti.isValidNumber()) {
+            showFieldError('whatsapp_number', 'Please enter a valid international WhatsApp number.');
+            hasError = true;
+        } else {
+            whatsappInput.value = iti.getNumber();
         }
         if (!faculty) {
             showFieldError('faculty_id', 'Please select your Academic Program Faculty.');
@@ -645,13 +754,7 @@
         });
     }
 
-    // Enforce digits only for WhatsApp (plus optional leading +, spaces) and CVC (digits only)
-    var whatsappInput = document.getElementById('whatsapp_number');
-    if (whatsappInput) {
-        whatsappInput.addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/[^0-9+\s-]/g, '');
-        });
-    }
+    // Allow characters for WhatsApp to be handled by intl-tel-input
 
     var cvcInput = document.getElementById('card_cvc');
     if (cvcInput) {
@@ -690,6 +793,11 @@
         if (!whatsapp) {
             showFieldError('whatsapp_number', 'WhatsApp contact number is required.');
             hasStep1Error = true;
+        } else if (!iti.isValidNumber()) {
+            showFieldError('whatsapp_number', 'Please enter a valid international WhatsApp number.');
+            hasStep1Error = true;
+        } else {
+            whatsappInput.value = iti.getNumber();
         }
         if (!faculty) {
             showFieldError('faculty_id', 'Please select your Academic Program Faculty.');
