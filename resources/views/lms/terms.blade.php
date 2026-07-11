@@ -20,7 +20,7 @@
         </p>
 
         <h2>3. Program Fees and Remittance</h2>
-        <p>All fees paid for tuition, enrollment processing, and certificate lookups are final. If paying via manual cash remittance (Western Union, Ria, WorldRemit), the student is responsible for providing valid transaction reference numbers (MTCN) via the manual payment gate. Administrative clearance typically takes up to 48 working hours.</p>
+        <p>All fees paid for tuition, enrollment processing, assessment gates, and certificate registry lookups are strictly non-refundable and non-transferable under any circumstances, without exception. Upon submission of payment via Stripe or manual cash remittance, the applicant waives all rights to cancellation, fee reversals, or refund demands. The student remains entirely responsible for providing valid transaction references via the manual gate. Administrative clearance takes up to 48 working hours.</p>
 
         <h2>4. Academic Evaluation Policy</h2>
         <p>Evaluations are timed and subject to strict anti-cheating monitoring. Any attempt to exit the exam screen, switch tabs, or use external resources will result in automatic session termination and score forfeiture.</p>

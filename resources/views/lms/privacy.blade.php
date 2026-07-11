@@ -6,9 +6,10 @@
 <div class="gov-grid-row">
     <div class="gov-grid-column-two-thirds">
         
-        <h1>Data Protection & Privacy Policy</h1>
+        <h1>CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD</h1>
         <p class="gov-hint">Last updated: July 2026</p>
 
+        <h2>Data Protection & Privacy Policy</h2>
         <p>The CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD is committed to protecting your privacy and ensuring the security of your personal records and academic data.</p>
 
         <h2>1. Information We Collect</h2>
