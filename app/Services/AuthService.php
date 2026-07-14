@@ -56,7 +56,7 @@ class AuthService
      * @return array
      * @throws Exception
      */
-    public function registerStudent($data, $file)
+    public function registerStudent($data, $files)
     {
         $pdo = DB::connection()->getPdo();
 
@@ -65,46 +65,45 @@ class AuthService
         $emailInput = trim($data['email'] ?? '');
         $whatsappNumber = trim($data['whatsapp_number'] ?? '');
         $facultyId = intval($data['faculty_id'] ?? 0);
+        $priorLearningLevel = trim($data['prior_learning_level'] ?? '');
         $repCode = trim($data['rep_code'] ?? '');
         $paymentChoice = trim($data['payment_choice'] ?? ''); // 'upfront', 'installment', 'cash'
 
-        if (empty($fullName) || empty($dob) || empty($emailInput) || empty($whatsappNumber) || empty($facultyId) || empty($paymentChoice)) {
-            throw new Exception('Please fill in all the required registration fields.');
+        if (empty($fullName) || empty($dob) || empty($emailInput) || empty($whatsappNumber) || empty($facultyId) || empty($priorLearningLevel) || empty($paymentChoice)) {
+            throw new Exception('Please fill in all the required registration fields including prior learning level.');
+        }
+
+        $vaultDir = base_path('secure_vault');
+        if (!file_exists($vaultDir)) {
+            mkdir($vaultDir, 0777, true);
+            file_put_contents($vaultDir . '/.htaccess', "Require all denied\n");
         }
 
         // Handle ID Document Upload
         $idDocumentPath = null;
-        if ($file) {
-            $vaultDir = base_path('secure_vault');
-            if (!file_exists($vaultDir)) {
-                mkdir($vaultDir, 0777, true);
-                file_put_contents($vaultDir . '/.htaccess', "Require all denied\n");
-            }
-
-            // If it's a Laravel UploadedFile
-            if ($file instanceof \Illuminate\Http\UploadedFile) {
-                if ($file->getSize() > 26214400) {
+        $idDoc = $files['id_document'] ?? null;
+        if ($idDoc) {
+            if ($idDoc instanceof \Illuminate\Http\UploadedFile) {
+                if ($idDoc->getSize() > 26214400) {
                     throw new Exception('The uploaded ID document exceeds the maximum size limit of 25MB.');
                 }
-                $fileExt = strtolower($file->getClientOriginalExtension());
+                $fileExt = strtolower($idDoc->getClientOriginalExtension());
                 if (!in_array($fileExt, ['pdf', 'jpg', 'jpeg', 'png'])) {
-                    throw new Exception('Invalid file type. Only PDF, JPG, JPEG, and PNG formats are allowed.');
+                    throw new Exception('Invalid ID document file type. Only PDF, JPG, JPEG, and PNG formats are allowed.');
                 }
                 $newFileName = uniqid('id_') . '.' . $fileExt;
-                $file->move($vaultDir, $newFileName);
+                $idDoc->move($vaultDir, $newFileName);
                 $idDocumentPath = 'secure_vault/' . $newFileName;
-            } 
-            // Fallback for native PHP $_FILES structure if passed
-            elseif (is_array($file) && isset($file['tmp_name']) && $file['error'] === UPLOAD_ERR_OK) {
-                if ($file['size'] > 26214400) {
+            } elseif (is_array($idDoc) && isset($idDoc['tmp_name']) && $idDoc['error'] === UPLOAD_ERR_OK) {
+                if ($idDoc['size'] > 26214400) {
                     throw new Exception('The uploaded ID document exceeds the maximum size limit of 25MB.');
                 }
-                $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $fileExt = strtolower(pathinfo($idDoc['name'], PATHINFO_EXTENSION));
                 if (!in_array($fileExt, ['pdf', 'jpg', 'jpeg', 'png'])) {
-                    throw new Exception('Invalid file type. Only PDF, JPG, JPEG, and PNG formats are allowed.');
+                    throw new Exception('Invalid ID document file type. Only PDF, JPG, JPEG, and PNG formats are allowed.');
                 }
                 $newFileName = uniqid('id_') . '.' . $fileExt;
-                if (move_uploaded_file($file['tmp_name'], $vaultDir . '/' . $newFileName)) {
+                if (move_uploaded_file($idDoc['tmp_name'], $vaultDir . '/' . $newFileName)) {
                     $idDocumentPath = 'secure_vault/' . $newFileName;
                 } else {
                     throw new Exception('Failed to save the uploaded ID document in our secure vault.');
@@ -114,6 +113,42 @@ class AuthService
             }
         } else {
             throw new Exception('ID / Passport document is required for verification.');
+        }
+
+        // Handle Prior Learning Document Upload
+        $priorLearningDocPath = null;
+        $priorDoc = $files['prior_learning_doc'] ?? null;
+        if ($priorDoc) {
+            if ($priorDoc instanceof \Illuminate\Http\UploadedFile) {
+                if ($priorDoc->getSize() > 26214400) {
+                    throw new Exception('The uploaded prior learning document exceeds the maximum size limit of 25MB.');
+                }
+                $fileExt = strtolower($priorDoc->getClientOriginalExtension());
+                if (!in_array($fileExt, ['pdf', 'jpg', 'jpeg', 'png'])) {
+                    throw new Exception('Invalid High School Certificate file type. Only PDF, JPG, JPEG, and PNG formats are allowed.');
+                }
+                $newFileName = uniqid('prior_') . '.' . $fileExt;
+                $priorDoc->move($vaultDir, $newFileName);
+                $priorLearningDocPath = 'secure_vault/' . $newFileName;
+            } elseif (is_array($priorDoc) && isset($priorDoc['tmp_name']) && $priorDoc['error'] === UPLOAD_ERR_OK) {
+                if ($priorDoc['size'] > 26214400) {
+                    throw new Exception('The uploaded prior learning document exceeds the maximum size limit of 25MB.');
+                }
+                $fileExt = strtolower(pathinfo($priorDoc['name'], PATHINFO_EXTENSION));
+                if (!in_array($fileExt, ['pdf', 'jpg', 'jpeg', 'png'])) {
+                    throw new Exception('Invalid High School Certificate file type. Only PDF, JPG, JPEG, and PNG formats are allowed.');
+                }
+                $newFileName = uniqid('prior_') . '.' . $fileExt;
+                if (move_uploaded_file($priorDoc['tmp_name'], $vaultDir . '/' . $newFileName)) {
+                    $priorLearningDocPath = 'secure_vault/' . $newFileName;
+                } else {
+                    throw new Exception('Failed to save the uploaded prior learning document in our secure vault.');
+                }
+            } else {
+                throw new Exception('High School Certificate is required for verification.');
+            }
+        } else {
+            throw new Exception('High School Certificate is required for verification.');
         }
 
         // Check if email already exists
@@ -134,8 +169,8 @@ class AuthService
             $pdo->beginTransaction();
 
             // Insert student user
-            $stmt = $pdo->prepare("INSERT INTO users (full_name, dob, email, whatsapp_number, password_hash, role, faculty_id, rep_code, id_document_path, account_status) VALUES (?, ?, ?, ?, ?, 'student', ?, ?, ?, ?)");
-            $stmt->execute([$fullName, $dob, $emailInput, $whatsappNumber, $hash, $facultyId, $repCode ? $repCode : null, $idDocumentPath, $status]);
+            $stmt = $pdo->prepare("INSERT INTO users (full_name, dob, email, whatsapp_number, password_hash, role, faculty_id, rep_code, id_document_path, prior_learning_level, prior_learning_doc_path, account_status) VALUES (?, ?, ?, ?, ?, 'student', ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$fullName, $dob, $emailInput, $whatsappNumber, $hash, $facultyId, $repCode ? $repCode : null, $idDocumentPath, $priorLearningLevel, $priorLearningDocPath, $status]);
             $userId = $pdo->lastInsertId();
 
             if ($paymentChoice === 'cash') {
@@ -195,18 +230,29 @@ class AuthService
                     ]
                 ]);
             } catch (\Exception $e) {
+                if ($e instanceof \Stripe\Exception\AuthenticationException || strpos(strtolower($e->getMessage()), 'api_key') !== false || strpos(strtolower($e->getMessage()), 'auth') !== false || strpos(strtolower($e->getMessage()), 'invalid key') !== false) {
+                    throw new Exception("This service is currently unavailable. Please try again in a few hours.");
+                }
+
                 // Fallback to pre-built pm_card_visa if sandbox account blocks raw card details API
                 if (strpos($e->getMessage(), 'directly to the Stripe API') !== false || strpos($e->getMessage(), 'raw card data') !== false) {
-                    $intent = PaymentIntent::create([
-                        'amount' => intval($amount * 100),
-                        'currency' => 'gbp',
-                        'payment_method' => 'pm_card_visa',
-                        'confirm' => true,
-                        'automatic_payment_methods' => [
-                            'enabled' => true,
-                            'allow_redirects' => 'never'
-                        ]
-                    ]);
+                    try {
+                        $intent = PaymentIntent::create([
+                            'amount' => intval($amount * 100),
+                            'currency' => 'gbp',
+                            'payment_method' => 'pm_card_visa',
+                            'confirm' => true,
+                            'automatic_payment_methods' => [
+                                'enabled' => true,
+                                'allow_redirects' => 'never'
+                            ]
+                        ]);
+                    } catch (\Exception $ex) {
+                        if ($ex instanceof \Stripe\Exception\AuthenticationException || strpos(strtolower($ex->getMessage()), 'api_key') !== false || strpos(strtolower($ex->getMessage()), 'auth') !== false || strpos(strtolower($ex->getMessage()), 'invalid key') !== false) {
+                            throw new Exception("This service is currently unavailable. Please try again in a few hours.");
+                        }
+                        throw $ex;
+                    }
                 } else {
                     throw $e;
                 }

@@ -65,11 +65,7 @@
                 <button type="submit" class="gov-button">Sign in</button>
             </form>
 
-            <div style="margin-top: 30px; border-top: 1px solid #EBF3FC; padding-top: 20px; font-size: 12px; color: #777; line-height: 1.5;">
-                <strong>Demo Accounts:</strong><br>
-                - Admin: <code>admin@mail.com</code> / <code>1234567890</code><br>
-                - Student: <code>student@mail.com</code> / <code>1234567890</code>
-            </div>
+
 
         </div>
     </div>

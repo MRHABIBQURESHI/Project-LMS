@@ -52,17 +52,28 @@ class VerificationService
         return $stmt->fetch();
     }
 
+    public function lookupCentre($centreId)
+    {
+        $pdo = DB::connection()->getPdo();
+        $stmt = $pdo->prepare("
+            SELECT * FROM affiliates WHERE rep_code = ?
+        ");
+        $stmt->execute([$centreId]);
+        return $stmt->fetch();
+    }
+
     /**
-     * Process paid corporate lookup fee of £49.00 via Stripe and fetch candidate transcript.
+     * Process paid corporate lookup fee of £49.00 via Stripe and fetch candidate transcript or center profile.
      *
      * @param string $certUid
      * @param string $companyName
      * @param string $companyEmail
      * @param array $cardDetails
+     * @param bool $isCentre
      * @return array
      * @throws Exception
      */
-    public function processCorporatePayment($certUid, $companyName, $companyEmail, $cardDetails)
+    public function processCorporatePayment($certUid, $companyName, $companyEmail, $cardDetails, $isCentre = false)
     {
         $pdo = DB::connection()->getPdo();
 
@@ -70,9 +81,21 @@ class VerificationService
             throw new Exception('Please enter both your Company Name and Business Email Address.');
         }
 
-        $certificate = $this->lookupCertificate($certUid);
-        if (!$certificate) {
-            throw new Exception('No verifiable registry match found for reference ID: ' . htmlspecialchars($certUid));
+        $certificate = null;
+        $centre = null;
+        $targetUserId = 1; // Default admin fallback for payments user_id foreign key
+
+        if ($isCentre) {
+            $centre = $this->lookupCentre($certUid);
+            if (!$centre) {
+                throw new Exception('No verifiable registry match found for Centre ID: ' . htmlspecialchars($certUid));
+            }
+        } else {
+            $certificate = $this->lookupCertificate($certUid);
+            if (!$certificate) {
+                throw new Exception('No verifiable registry match found for reference ID: ' . htmlspecialchars($certUid));
+            }
+            $targetUserId = $certificate['student_id'];
         }
 
         $cardNumber = str_replace(' ', '', $cardDetails['card_number'] ?? '');
@@ -115,18 +138,29 @@ class VerificationService
                 ]
             ]);
         } catch (\Exception $e) {
+            if ($e instanceof \Stripe\Exception\AuthenticationException || strpos(strtolower($e->getMessage()), 'api_key') !== false || strpos(strtolower($e->getMessage()), 'auth') !== false || strpos(strtolower($e->getMessage()), 'invalid key') !== false) {
+                throw new Exception("This service is currently unavailable. Please try again in a few hours.");
+            }
+
             // Fallback to pre-built pm_card_visa if sandbox account blocks raw card details API
             if (strpos($e->getMessage(), 'directly to the Stripe API') !== false || strpos($e->getMessage(), 'raw card data') !== false) {
-                $intent = PaymentIntent::create([
-                    'amount' => 4900,
-                    'currency' => 'gbp',
-                    'payment_method' => 'pm_card_visa',
-                    'confirm' => true,
-                    'automatic_payment_methods' => [
-                        'enabled' => true,
-                        'allow_redirects' => 'never'
-                    ]
-                ]);
+                try {
+                    $intent = PaymentIntent::create([
+                        'amount' => 4900,
+                        'currency' => 'gbp',
+                        'payment_method' => 'pm_card_visa',
+                        'confirm' => true,
+                        'automatic_payment_methods' => [
+                            'enabled' => true,
+                            'allow_redirects' => 'never'
+                        ]
+                    ]);
+                } catch (\Exception $ex) {
+                    if ($ex instanceof \Stripe\Exception\AuthenticationException || strpos(strtolower($ex->getMessage()), 'api_key') !== false || strpos(strtolower($ex->getMessage()), 'auth') !== false || strpos(strtolower($ex->getMessage()), 'invalid key') !== false) {
+                        throw new Exception("This service is currently unavailable. Please try again in a few hours.");
+                    }
+                    throw $ex;
+                }
             } else {
                 throw $e;
             }
@@ -141,8 +175,14 @@ class VerificationService
         try {
             $pdo->beginTransaction();
             $payStmt = $pdo->prepare("INSERT INTO payments (user_id, type, method, amount, status, transaction_ref) VALUES (?, 'verification_lookup', 'stripe', 49.00, 'paid', ?)");
-            $payStmt->execute([$certificate['student_id'], $txRef]);
+            $payStmt->execute([$targetUserId, $txRef]);
             $pdo->commit();
+
+            if ($isCentre) {
+                return [
+                    'centre' => $centre
+                ];
+            }
 
             // Fetch assignment details for detailed transcript report
             $aStmt = $pdo->prepare("

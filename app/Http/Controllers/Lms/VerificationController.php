@@ -19,62 +19,81 @@ class VerificationController extends Controller
     /**
      * Display the search verification form.
      */
-    public function index()
+    /**
+     * Display the search verification form.
+     */
+    public function index(Request $request)
     {
         return view('lms.verification', [
             'search_performed' => false,
-            'search_type' => 'student',
-            'cert_uid' => '',
+            'cert_uid' => trim($request->query('cert_uid', '')),
             'certificate' => null,
+            'centre' => null,
             'paid_successfully' => false,
             'error' => '',
+            'company_name' => '',
+            'company_email' => '',
         ]);
     }
 
     /**
-     * Handle verification search and paid corporate queries.
+     * Handle verification search and paid queries.
      */
     public function search(Request $request)
     {
-        $certUid = trim($request->input('cert_uid', ''));
-        $searchType = trim($request->input('search_type', 'student'));
+        $certUid = strtoupper(trim($request->input('cert_uid', '')));
         
         $error = '';
         $certificate = null;
+        $centre = null;
         $paidSuccessfully = false;
         $assignments = [];
         $bestExam = null;
+        $resultType = 'certificate';
 
         if (empty($certUid)) {
-            $error = 'Please enter a valid Certificate Reference UID.';
+            $error = 'Please enter a valid Serial ID or Centre ID.';
         } else {
             try {
-                $certificate = $this->verificationService->lookupCertificate($certUid);
+                $isCentre = str_starts_with($certUid, 'CTR-');
                 
-                if (!$certificate) {
-                    $error = 'No verifiable registry match found for reference ID: ' . htmlspecialchars($certUid);
-                } elseif ($searchType === 'corporate') {
-                    // Check if payment was submitted
-                    if ($request->has('process_corporate_payment')) {
-                        $cardDetails = [
-                            'card_holder' => $request->input('card_holder'),
-                            'card_number' => $request->input('card_number'),
-                            'card_exp' => $request->input('card_exp'),
-                            'card_cvc' => $request->input('card_cvc'),
-                        ];
-
-                        $result = $this->verificationService->processCorporatePayment(
-                            $certUid,
-                            $request->input('company_name'),
-                            $request->input('company_email'),
-                            $cardDetails
-                        );
-
-                        $paidSuccessfully = true;
-                        $certificate = $result['certificate'];
-                        $assignments = $result['assignments'];
-                        $bestExam = $result['best_exam'];
+                if ($isCentre) {
+                    $centre = $this->verificationService->lookupCentre($certUid);
+                    if (!$centre) {
+                        throw new Exception('No verifiable registry match found for Centre ID: ' . htmlspecialchars($certUid));
                     }
+                    $resultType = 'centre';
+                } else {
+                    $certificate = $this->verificationService->lookupCertificate($certUid);
+                    if (!$certificate) {
+                        throw new Exception('No verifiable registry match found for reference ID: ' . htmlspecialchars($certUid));
+                    }
+                    $resultType = 'certificate';
+                }
+
+                // Process corporate check fee payment of £49.00
+                $cardDetails = [
+                    'card_holder' => $request->input('card_holder'),
+                    'card_number' => $request->input('card_number'),
+                    'card_exp' => $request->input('card_exp'),
+                    'card_cvc' => $request->input('card_cvc'),
+                ];
+
+                $result = $this->verificationService->processCorporatePayment(
+                    $certUid,
+                    $request->input('company_name'),
+                    $request->input('company_email'),
+                    $cardDetails,
+                    $isCentre
+                );
+
+                $paidSuccessfully = true;
+                if ($isCentre) {
+                    $centre = $result['centre'];
+                } else {
+                    $certificate = $result['certificate'];
+                    $assignments = $result['assignments'];
+                    $bestExam = $result['best_exam'];
                 }
             } catch (Exception $e) {
                 $error = $e->getMessage();
@@ -83,13 +102,14 @@ class VerificationController extends Controller
 
         return view('lms.verification', [
             'search_performed' => true,
-            'search_type' => $searchType,
             'cert_uid' => $certUid,
             'certificate' => $certificate,
+            'centre' => $centre,
             'paid_successfully' => $paidSuccessfully,
             'assignments' => $assignments,
             'best_exam' => $bestExam,
             'error' => $error,
+            'result_type' => $resultType,
             'company_name' => $request->input('company_name'),
             'company_email' => $request->input('company_email'),
         ]);
@@ -98,7 +118,7 @@ class VerificationController extends Controller
     /**
      * Serve the premium verification page (maps to verify.php).
      */
-    public function verifyDetail(Request $request)
+    public function verifyView(Request $request)
     {
         $certUid = strtoupper(trim($request->input('cert_uid', $request->query('cert_uid', ''))));
         
@@ -128,5 +148,13 @@ class VerificationController extends Controller
             'cert_uid' => $certUid,
             'result' => $result,
         ]);
+    }
+
+    /**
+     * Handle verify POST request (forward to verifyView).
+     */
+    public function verify(Request $request)
+    {
+        return $this->verifyView($request);
     }
 }

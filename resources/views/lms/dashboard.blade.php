@@ -204,7 +204,10 @@
         <aside class="db-sidebar" id="dbSidebar">
             <div class="db-brand" style="display:flex; align-items:center; gap:8px; padding: 15px 15px;">
                 <img src="{{ asset('assets/images/logo.png') }}" alt="Logo" style="max-height: 42px; object-fit: contain; display: block;">
-                <span style="font-weight:700; font-size:15px; color:#FFFFFF; line-height: 1.2;">UK London Award</span>
+                <span style="font-weight:700; font-size:12px; color:#FFFFFF; line-height: 1.2;">
+                    CPD UK LONDON ACADEMIC INSTITUTE
+                    <span style="display:block; font-size:8px; color:rgba(255,255,255,0.7); font-weight:normal; margin-top:2px; text-transform:uppercase; letter-spacing:0.3px;">CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD</span>
+                </span>
             </div>
             
             <ul class="db-nav-menu">
@@ -344,7 +347,7 @@
                         <div class="gov-error-banner" style="margin-bottom: 0;">
                             <div class="gov-error-title">Account Locked</div>
                             <p>Your student profile has been locked due to an anti-cheat exam violation or administrative hold.</p>
-                            <p style="margin-top: 10px; font-weight: 600;">Please contact the registry at registry@liab-edu.org to appeal.</p>
+                            <p style="margin-top: 10px; font-weight: 600;">Please contact the registry at registry@cpduk.london to appeal.</p>
                         </div>
                     </div>
 
