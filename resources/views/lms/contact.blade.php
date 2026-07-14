@@ -37,7 +37,7 @@
             </div>
             <div class="gov-list-row">
                 <span class="gov-list-key">Registry Support Email</span>
-                <span class="gov-list-value"><a href="mailto:registry@liab-edu.org">registry@liab-edu.org</a></span>
+                <span class="gov-list-value"><a href="mailto:registry@cpduk.london">registry@cpduk.london</a></span>
             </div>
             <div class="gov-list-row">
                 <span class="gov-list-key">Student Helpline Whatsapp</span>

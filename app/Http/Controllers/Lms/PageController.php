@@ -57,7 +57,16 @@ class PageController extends Controller
         } else {
             try {
                 // Generate unique representative code
-                $repCode = 'REP-LDN-' . strtoupper(substr(md5(uniqid()), 0, 5));
+                $currentYear = date('Y');
+                $seqQuery = DB::select("SELECT rep_code FROM affiliates WHERE rep_code LIKE ? ORDER BY id DESC LIMIT 1", ["CTR-LDN-$currentYear-%"]);
+                $nextNum = 1;
+                if (!empty($seqQuery)) {
+                    $lastCode = $seqQuery[0]->rep_code;
+                    $parts = explode('-', $lastCode);
+                    $lastNum = intval(end($parts));
+                    $nextNum = $lastNum + 1;
+                }
+                $repCode = sprintf("CTR-LDN-%s-%05d", $currentYear, $nextNum);
 
                 $contactInfo = "Email: $email, WhatsApp: $whatsapp, Region: $region, Experience: $experience, Expected Volume: $volume";
 

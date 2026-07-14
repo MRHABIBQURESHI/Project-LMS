@@ -627,6 +627,21 @@ class DashboardService
             throw new Exception('This email address is already registered to another user.');
         }
 
+        // Faculty lock constraint: if tuition is paid, lock faculty track
+        $chkPaid = $pdo->prepare("SELECT id FROM payments WHERE user_id = ? AND type = 'tuition' AND status = 'paid'");
+        $chkPaid->execute([$studentId]);
+        $isPaid = $chkPaid->fetchColumn();
+
+        if ($isPaid) {
+            $curQuery = $pdo->prepare("SELECT faculty_id FROM users WHERE id = ?");
+            $curQuery->execute([$studentId]);
+            $currentFacultyId = intval($curQuery->fetchColumn());
+
+            if ($currentFacultyId !== $facultyId) {
+                throw new Exception("Lock Error: Faculty Track is locked after tuition fee payment is cleared.");
+            }
+        }
+
         try {
             $stmt = $pdo->prepare("UPDATE users SET full_name = ?, dob = ?, email = ?, whatsapp_number = ?, faculty_id = ?, rep_code = ?, account_status = ? WHERE id = ? AND role = 'student'");
             $stmt->execute([$fullName, $dob, $email, $whatsappNumber, $facultyId, $repCode ? $repCode : null, $status, $studentId]);

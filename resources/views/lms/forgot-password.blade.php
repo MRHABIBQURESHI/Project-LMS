@@ -50,12 +50,6 @@
             @if (!empty($success))
                 <div class="gov-success-banner" style="padding: 12px; margin-bottom: 20px;">
                     <p style="font-size: 13px; margin-bottom: 0; color:#00703c; font-weight: 600;">{{ $success }}</p>
-                    @if (!empty($reset_link))
-                        <p style="margin-top: 15px; font-size: 13px; margin-bottom: 0;">
-                            [Local Test Link]:<br>
-                            <a href="{{ $reset_link }}" class="gov-button" style="padding: 8px 16px; font-size: 13px; margin-top: 8px; border-radius: 4px; display: inline-block;">Reset Password Now</a>
-                        </p>
-                    @endif
                 </div>
             @endif
 

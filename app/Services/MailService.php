@@ -14,6 +14,21 @@ class MailService
      */
     public function sendMailtrapEmail($to, $subject, $bodyText)
     {
+        // Try sending via cPanel SMTP first
+        try {
+            \Illuminate\Support\Facades\Mail::raw($bodyText, function ($message) use ($to, $subject) {
+                $message->to($to)
+                        ->subject($subject);
+            });
+            return true;
+        } catch (\Exception $e) {
+            $log_dir = public_path('uploads');
+            if (!file_exists($log_dir)) {
+                mkdir($log_dir, 0777, true);
+            }
+            file_put_contents($log_dir . '/emails.txt', "cPanel SMTP Connection Failure: " . $e->getMessage() . " (Falling back to Mailtrap API)\n", FILE_APPEND);
+        }
+
         $sandbox_id = getenv('MAILTRAP_INBOX_ID') ?: '4763995';
         $api_token = getenv('MAILTRAP_TOKEN') ?: 'cd9fda3ed30ebcbd5ca752147ae0d539';
 

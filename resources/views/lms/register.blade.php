@@ -348,25 +348,18 @@
                                 <span class="validation-error-msg" id="error_dob"></span>
                             </div>
                             <div class="gov-form-group">
-                                <label class="gov-label" for="whatsapp_number">WhatsApp Number</label>
-                                <input class="gov-input" id="whatsapp_number" name="whatsapp_number" type="tel" placeholder="+44 7000 000000" required value="{{ request()->input('whatsapp_number', '') }}">
-                                <span class="validation-error-msg" id="error_whatsapp_number"></span>
-                            </div>
-                        </div>
-
-                        <div class="form-grid-row">
-                            <div class="gov-form-group">
                                 <label class="gov-label" for="email">Student Email</label>
                                 <input class="gov-input" id="email" name="email" type="email" placeholder="student@example.com" required value="{{ request()->input('email', '') }}">
                                 <span class="validation-error-msg" id="error_email"></span>
                             </div>
-                            <div class="gov-form-group">
-                                <label class="gov-label" for="rep_code">Affiliate / Rep Code <span style="color:#999;font-weight:400;">(optional)</span></label>
-                                <input class="gov-input" id="rep_code" name="rep_code" type="text" placeholder="e.g. REP-DEMO-01" value="{{ request()->input('rep_code', '') }}">
-                            </div>
                         </div>
 
-                        <div class="form-grid-row">
+                        <div class="form-grid-row-3">
+                            <div class="gov-form-group">
+                                <label class="gov-label" for="whatsapp_number">WhatsApp Number</label>
+                                <input class="gov-input" id="whatsapp_number" name="whatsapp_number" type="tel" placeholder="+44 7000 000000" required value="{{ request()->input('whatsapp_number', '') }}">
+                                <span class="validation-error-msg" id="error_whatsapp_number"></span>
+                            </div>
                             <div class="gov-form-group">
                                 <label class="gov-label" for="faculty_id">Academic Faculty</label>
                                 <select class="gov-select" id="faculty_id" name="faculty_id" required>
@@ -378,7 +371,30 @@
                                 <span class="validation-error-msg" id="error_faculty_id"></span>
                             </div>
                             <div class="gov-form-group">
-                                <label class="gov-label" for="id_document">ID / Passport Document <span style="color:#d4351c;">*</span></label>
+                                <label class="gov-label" for="rep_code">Affiliate / Rep Code <span style="color:#999;font-weight:400;">(optional)</span></label>
+                                <input class="gov-input" id="rep_code" name="rep_code" type="text" placeholder="e.g. REP-DEMO-01" value="{{ request()->input('rep_code', '') }}">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-row-3">
+                            <div class="gov-form-group">
+                                <label class="gov-label" for="prior_learning_level">Prior Learning Level <span style="color:#d4351c;">*</span></label>
+                                <select class="gov-select" id="prior_learning_level" name="prior_learning_level" required>
+                                    <option value="">-- Choose Option --</option>
+                                    <option value="Level 3/A-Level" {{ request()->input('prior_learning_level') == 'Level 3/A-Level' ? 'selected' : '' }}>Level 3/A-Level</option>
+                                    <option value="Mature Student 21+" {{ request()->input('prior_learning_level') == 'Mature Student 21+' ? 'selected' : '' }}>Mature Student 21+</option>
+                                    <option value="Level 2/GCSE" {{ request()->input('prior_learning_level') == 'Level 2/GCSE' ? 'selected' : '' }}>Level 2/GCSE</option>
+                                    <option value="Technical Certificate" {{ request()->input('prior_learning_level') == 'Technical Certificate' ? 'selected' : '' }}>Technical Certificate</option>
+                                </select>
+                                <span class="validation-error-msg" id="error_prior_learning_level"></span>
+                            </div>
+                            <div class="gov-form-group">
+                                <label class="gov-label" for="prior_learning_doc">High School Certificate <span style="color:#d4351c;">*</span></label>
+                                <input class="gov-input" id="prior_learning_doc" name="prior_learning_doc" type="file" required accept=".pdf,.jpg,.jpeg,.png">
+                                <span class="validation-error-msg" id="error_prior_learning_doc"></span>
+                            </div>
+                            <div class="gov-form-group">
+                                <label class="gov-label" for="id_document">Passport ID / Document <span style="color:#d4351c;">*</span></label>
                                 <input class="gov-input" id="id_document" name="id_document" type="file" required accept=".pdf,.jpg,.jpeg,.png">
                                 <span class="validation-error-msg" id="error_id_document"></span>
                             </div>
@@ -482,60 +498,35 @@
     <div class="login-right-panel" style="display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 50px 60px; color: #ffffff; overflow-y: auto;">
         <div style="max-width: 540px; margin: 0 auto; width: 100%;">
             <!-- Header Section -->
-            <h2 style="font-size: 28px; font-weight: 800; color: #ffffff; margin-bottom: 8px; line-height: 1.25; letter-spacing: -0.5px;">The Fast Track to Your UK Board Seat</h2>
-            <p style="font-size: 15px; color: #c0d3e9; margin-bottom: 30px; font-weight: 500; line-height: 1.4;">Get certified in 60 hours without the institutional price tag.</p>
+            <h2 style="font-size: 28px; font-weight: 800; color: #ffffff; margin-bottom: 24px; line-height: 1.25; letter-spacing: -0.5px;">Why Waste a Year on Campus?</h2>
             
             <!-- Bullet Details List -->
             <ul style="list-style: none; padding: 0; margin: 0 0 35px 0;">
                 <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
                     <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
-                    <span><strong>Save £15K+:</strong> Skip traditional £17,000–£29,000 tuition fees.</span>
+                    <span>Skip the foundation year entirely</span>
                 </li>
                 <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
                     <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
-                    <span><strong>60-Hour Curriculum:</strong> Fast-track, independent assessment model.</span>
+                    <span>Guaranteed UK university placement upon completion</span>
                 </li>
                 <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
                     <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
-                    <span><strong>Global Access:</strong> Open to UK (16+) and international applicants (18+).</span>
+                    <span>Save £15k-£29k on international student costs</span>
                 </li>
                 <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
                     <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
-                    <span><strong>Flexible Payments:</strong> Only £2,249 full price, or 3 installments of £749.</span>
+                    <span>Verified through secure online examinations&</span>
                 </li>
                 <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
                     <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
-                    <span><strong>Effortless Testing:</strong> Simple portfolio evaluation and 2-hour digital exam.</span>
+                    <span>Get Started for Only £2,249 full price, or 3 installments of £749</span>
                 </li>
                 <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
                     <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
-                    <span><strong>University Gateway:</strong> Optional premium UK university placement concierge.</span>
-                </li>
-                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;">
-                    <span style="color: #4cd964; font-weight: bold; font-size: 16px; margin-top: -2px;">✓</span>
-                    <span><strong>Instant Verification:</strong> Globally archived public registry lookup.</span>
+                    <span>Your direct route to a UK degree starts here!</span>
                 </li>
             </ul>
-
-            <!-- Highlighted Board Benefits Box -->
-            <div style="background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 22px 26px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); position: relative; overflow: hidden;">
-                <h3 style="font-size: 18px; font-weight: 700; color: #ffffff; margin-top: 0; margin-bottom: 14px; letter-spacing: 0.5px;">Board Benefits</h3>
-                <ul style="list-style: none; padding: 0; margin: 0;">
-                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 13px; line-height: 1.4; color: #e2eefb;">
-                        <span style="color: #f3d078; font-weight: bold;">✔</span>
-                        <span>Official Global Credential Archival</span>
-                    </li>
-                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 13px; line-height: 1.4; color: #e2eefb;">
-                        <span style="color: #f3d078; font-weight: bold;">✔</span>
-                        <span>Secure 2-Hour Timed Assessment Gate</span>
-                    </li>
-                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0; font-size: 13px; line-height: 1.4; color: #e2eefb;">
-                        <span style="color: #f3d078; font-weight: bold;">✔</span>
-                        <span>Instant Public Registry Serialization Lookup</span>
-                    </li>
-                </ul>
-                <div style="position: absolute; bottom: 12px; right: 15px; opacity: 0.25; font-size: 24px; color: #fff;">✦</div>
-            </div>
         </div>
     </div>
 
@@ -618,6 +609,7 @@
         var email = document.getElementById('email').value.trim();
         var whatsapp = document.getElementById('whatsapp_number').value.trim();
         var faculty = document.getElementById('faculty_id').value;
+        var priorLevel = document.getElementById('prior_learning_level').value;
         var hasError = false;
 
         if (!name) {
@@ -646,6 +638,19 @@
         }
         if (!faculty) {
             showFieldError('faculty_id', 'Please select your Academic Program Faculty.');
+            hasError = true;
+        }
+        if (!priorLevel) {
+            showFieldError('prior_learning_level', 'Please select your Prior Learning Level.');
+            hasError = true;
+        }
+
+        var priorDoc = document.getElementById('prior_learning_doc');
+        if (priorDoc && priorDoc.files.length === 0) {
+            showFieldError('prior_learning_doc', 'Please upload your High School Certificate (Max 25MB).');
+            hasError = true;
+        } else if (priorDoc && priorDoc.files[0] && priorDoc.files[0].size > 26214400) {
+            showFieldError('prior_learning_doc', 'File size exceeds the 25MB limit.');
             hasError = true;
         }
         
@@ -772,6 +777,7 @@
         var email = document.getElementById('email').value.trim();
         var whatsapp = document.getElementById('whatsapp_number').value.trim();
         var faculty = document.getElementById('faculty_id').value;
+        var priorLevel = document.getElementById('prior_learning_level').value;
         var payment = document.getElementById('payment_choice').value;
         var hasStep1Error = false;
 
@@ -801,6 +807,19 @@
         }
         if (!faculty) {
             showFieldError('faculty_id', 'Please select your Academic Program Faculty.');
+            hasStep1Error = true;
+        }
+        if (!priorLevel) {
+            showFieldError('prior_learning_level', 'Please select your Prior Learning Level.');
+            hasStep1Error = true;
+        }
+
+        var priorDoc = document.getElementById('prior_learning_doc');
+        if (priorDoc && priorDoc.files.length === 0) {
+            showFieldError('prior_learning_doc', 'Please upload your High School Certificate (Max 25MB).');
+            hasStep1Error = true;
+        } else if (priorDoc && priorDoc.files[0] && priorDoc.files[0].size > 26214400) {
+            showFieldError('prior_learning_doc', 'File size exceeds the 25MB limit.');
             hasStep1Error = true;
         }
         

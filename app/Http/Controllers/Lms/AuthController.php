@@ -84,14 +84,23 @@ class AuthController extends Controller
     {
         try {
             $data = $request->all();
-            $file = $request->file('id_document') ?? $request->file('id_document');
+            $idDoc = $request->file('id_document');
+            $priorDoc = $request->file('prior_learning_doc');
             
             // If file upload using native array fallback
-            if (!$file && isset($_FILES['id_document'])) {
-                $file = $_FILES['id_document'];
+            if (!$idDoc && isset($_FILES['id_document'])) {
+                $idDoc = $_FILES['id_document'];
+            }
+            if (!$priorDoc && isset($_FILES['prior_learning_doc'])) {
+                $priorDoc = $_FILES['prior_learning_doc'];
             }
 
-            $result = $this->authService->registerStudent($data, $file);
+            $files = [
+                'id_document' => $idDoc,
+                'prior_learning_doc' => $priorDoc
+            ];
+
+            $result = $this->authService->registerStudent($data, $files);
 
             if ($result['payment_choice'] === 'cash') {
                 session([
