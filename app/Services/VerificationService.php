@@ -178,6 +178,21 @@ class VerificationService
             $payStmt->execute([$targetUserId, $txRef]);
             $pdo->commit();
 
+            // Fetch contact phone for WhatsApp confirmation receipt
+            $toPhone = '';
+            if ($isCentre) {
+                $toPhone = '+447000000000'; // Default admin / registrar notify
+            } else {
+                $uStmt = $pdo->prepare("SELECT whatsapp_number FROM users WHERE id = ?");
+                $uStmt->execute([$targetUserId]);
+                $toPhone = $uStmt->fetchColumn();
+            }
+
+            if (!empty($toPhone)) {
+                $whatsappMsg = "CPD UK LONDON REGISTRY: We have received your payment of £49.00 GBP for credential validation lookup of Serial ID " . $certUid . ". Verification status: VERIFIED.";
+                app(\App\Services\MailService::class)->sendWhatsApp($toPhone, $whatsappMsg);
+            }
+
             if ($isCentre) {
                 return [
                     'centre' => $centre

@@ -171,7 +171,7 @@ class DashboardController extends Controller
                         'card_cvc' => $request->input('card_cvc'),
                     ];
                     $this->paymentService->payResitFee($userId, $cardDetails);
-                    $successMsg = 'Resit Fee of £150.00 processed successfully. Exam attempt eligibility unlocked.';
+                    $successMsg = 'Resit Fee of £229.00 processed successfully. Exam attempt eligibility unlocked.';
                 }
 
                 // 5. Pay Installment Fee (£749)
@@ -313,6 +313,25 @@ class DashboardController extends Controller
 
                     $this->dashboardService->toggleExamRetake($studentId, $newState);
                     $successMsg = $newState ? 'Exam retake successfully unlocked.' : 'Exam retake successfully locked.';
+                }
+
+                // 13. Toggle Phase II Coursework Expedite
+                elseif ($request->has('toggle_phase2_expedite')) {
+                    $studentId = intval($request->input('user_id'));
+                    $newState = intval($request->input('new_state'));
+
+                    DB::update("UPDATE users SET phase2_expedited = ? WHERE id = ?", [$newState, $studentId]);
+                    
+                    if ($newState) {
+                        $studentInfo = DB::selectOne("SELECT whatsapp_number, full_name FROM users WHERE id = ?", [$studentId]);
+                        if ($studentInfo) {
+                            $whatsappMsg = "Dear " . $studentInfo->full_name . ", Your Phase II Specialty modules have been manually expedited by the Academic Committee.";
+                            app(\App\Services\MailService::class)->sendWhatsApp($studentInfo->whatsapp_number, $whatsappMsg);
+                        }
+                        $successMsg = 'Phase II coursework lock successfully bypassed. WhatsApp alert dispatched.';
+                    } else {
+                        $successMsg = '14-Day speed lock re-applied successfully.';
+                    }
                 }
             }
 
