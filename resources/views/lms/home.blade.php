@@ -36,7 +36,7 @@
             <span class="gov-hint" style="margin-top: 5px; color: #555;">Register for qualifications, intake programs, and enter the assessment registry.</span>
         </div>
         <div class="gov-list-action">
-            <a href="{{ route('lms.register') }}" class="gov-button" style="background-color: #00703c; padding: 8px 16px; border-radius: 4px; font-size: 13px; text-decoration: none; border-bottom: none; display: inline-block;">Register now &rarr;</a>
+            <a href="{{ route('lms.register') }}" class="gov-button" style="background-color: #00703c; color: #FFFFFF !important; padding: 8px 16px; border-radius: 4px; font-size: 13px; text-decoration: none; border-bottom: none; display: inline-block;">Register now &rarr;</a>
         </div>
     </div>
 
@@ -46,7 +46,7 @@
             <span class="gov-hint" style="margin-top: 5px; color: #555;">Access portal, submit portfolios (25MB), or enter the assessment terminal.</span>
         </div>
         <div class="gov-list-action">
-            <a href="{{ route('lms.dashboard') }}" class="gov-button" style="background-color: #002F6C; padding: 8px 16px; border-radius: 4px; font-size: 13px; text-decoration: none; border-bottom: none; display: inline-block;">Access dashboard &rarr;</a>
+            <a href="{{ route('lms.dashboard') }}" class="gov-button" style="background-color: #002F6C; color: #FFFFFF !important; padding: 8px 16px; border-radius: 4px; font-size: 13px; text-decoration: none; border-bottom: none; display: inline-block;">Access dashboard &rarr;</a>
         </div>
     </div>
 
@@ -56,7 +56,7 @@
             <span class="gov-hint" style="margin-top: 5px; color: #555;">Apply for institutional validation, clear academic center audits, or download your verified Centre Approval Certificate.</span>
         </div>
         <div class="gov-list-action">
-            <a href="{{ route('lms.contact') }}" class="gov-button" style="background-color: #4c4c4c; padding: 8px 16px; border-radius: 4px; font-size: 13px; text-decoration: none; border-bottom: none; display: inline-block;">Contact / Partner &rarr;</a>
+            <a href="{{ route('lms.contact') }}" class="gov-button" style="background-color: #4c4c4c; color: #FFFFFF !important; padding: 8px 16px; border-radius: 4px; font-size: 13px; text-decoration: none; border-bottom: none; display: inline-block;">Contact / Partner &rarr;</a>
         </div>
     </div>
 
@@ -66,7 +66,7 @@
             <span class="gov-hint" style="margin-top: 5px; color: #555;">Read our operational terms, fees schedule, and institutional regulations or data privacy policies.</span>
         </div>
         <div class="gov-list-action">
-            <a href="{{ route('lms.privacy') }}" class="gov-button gov-button-secondary" style="padding: 8px 16px; border-radius: 4px; font-size: 13px; text-decoration: none; display: inline-block;">View policies &rarr;</a>
+            <a href="{{ route('lms.privacy') }}" class="gov-button gov-button-secondary" style="color: #002F6C !important; padding: 8px 16px; border-radius: 4px; font-size: 13px; text-decoration: none; display: inline-block;">View policies &rarr;</a>
         </div>
     </div>
 
