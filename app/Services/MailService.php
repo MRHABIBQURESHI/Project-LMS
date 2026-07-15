@@ -70,4 +70,27 @@ class MailService
 
         return ($httpCode === 200);
     }
+
+    /**
+     * Send simulated WhatsApp message via Twilio API.
+     *
+     * @param string $to
+     * @param string $message
+     * @return bool
+     */
+    public function sendWhatsApp($to, $message)
+    {
+        $log_dir = public_path('uploads');
+        if (!file_exists($log_dir)) {
+            mkdir($log_dir, 0777, true);
+        }
+        $log_entry = "========================================\n" .
+                     "Twilio WhatsApp API Simulation\n" .
+                     "To: " . $to . "\n" .
+                     "Date: " . date('Y-m-d H:i:s') . "\n" .
+                     "Message: " . $message . "\n" .
+                     "========================================\n\n";
+        file_put_contents($log_dir . '/whatsapp_alerts.txt', $log_entry, FILE_APPEND);
+        return true;
+    }
 }

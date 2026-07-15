@@ -52,7 +52,7 @@ class PaymentService
 
             // Create and Confirm PaymentIntent
             $intent = PaymentIntent::create([
-                'amount' => 15000, // £150.00
+                'amount' => 22900, // £229.00
                 'currency' => 'gbp',
                 'payment_method' => $paymentMethod->id,
                 'confirm' => true,
@@ -62,18 +62,28 @@ class PaymentService
                 ]
             ]);
         } catch (\Exception $e) {
+            if ($e instanceof \Stripe\Exception\AuthenticationException || strpos(strtolower($e->getMessage()), 'api_key') !== false || strpos(strtolower($e->getMessage()), 'auth') !== false || strpos(strtolower($e->getMessage()), 'invalid key') !== false) {
+                throw new Exception("This service is currently unavailable. Please try again in a few hours.");
+            }
             // Fallback to pre-built pm_card_visa if sandbox account blocks raw card details API
             if (strpos($e->getMessage(), 'directly to the Stripe API') !== false || strpos($e->getMessage(), 'raw card data') !== false) {
-                $intent = PaymentIntent::create([
-                    'amount' => 15000,
-                    'currency' => 'gbp',
-                    'payment_method' => 'pm_card_visa',
-                    'confirm' => true,
-                    'automatic_payment_methods' => [
-                        'enabled' => true,
-                        'allow_redirects' => 'never'
-                    ]
-                ]);
+                try {
+                    $intent = PaymentIntent::create([
+                        'amount' => 22900,
+                        'currency' => 'gbp',
+                        'payment_method' => 'pm_card_visa',
+                        'confirm' => true,
+                        'automatic_payment_methods' => [
+                            'enabled' => true,
+                            'allow_redirects' => 'never'
+                        ]
+                    ]);
+                } catch (\Exception $ex) {
+                    if ($ex instanceof \Stripe\Exception\AuthenticationException || strpos(strtolower($ex->getMessage()), 'api_key') !== false || strpos(strtolower($ex->getMessage()), 'auth') !== false || strpos(strtolower($ex->getMessage()), 'invalid key') !== false) {
+                        throw new Exception("This service is currently unavailable. Please try again in a few hours.");
+                    }
+                    throw $ex;
+                }
             } else {
                 throw $e;
             }
@@ -87,8 +97,13 @@ class PaymentService
 
         try {
             $pdo->beginTransaction();
-            $payStmt = $pdo->prepare("INSERT INTO payments (user_id, type, method, amount, status, transaction_ref) VALUES (?, 'tuition', 'stripe', 150.00, 'paid', ?)");
+            $payStmt = $pdo->prepare("INSERT INTO payments (user_id, type, method, amount, status, transaction_ref) VALUES (?, 'tuition', 'stripe', 229.00, 'paid', ?)");
             $payStmt->execute([$userId, $txRef]);
+            
+            // Unlock student exam retake and set account_status to active
+            $unlockStmt = $pdo->prepare("UPDATE users SET exam_retake_unlocked = 1, account_status = 'active' WHERE id = ?");
+            $unlockStmt->execute([$userId]);
+            
             $pdo->commit();
         } catch (\PDOException $e) {
             if ($pdo->inTransaction()) {

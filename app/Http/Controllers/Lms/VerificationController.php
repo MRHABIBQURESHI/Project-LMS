@@ -19,20 +19,75 @@ class VerificationController extends Controller
     /**
      * Display the search verification form.
      */
-    /**
-     * Display the search verification form.
-     */
     public function index(Request $request)
     {
+        $certUid = strtoupper(trim($request->query('cert_uid', '')));
+        
+        $searchPerformed = false;
+        $paidSuccessfully = false;
+        $certificate = null;
+        $centre = null;
+        $assignments = [];
+        $bestExam = null;
+        $resultType = 'certificate';
+        $error = '';
+        $companyName = '';
+        $companyEmail = '';
+
+        // Retrieve from session if redirect back after success
+        if (session('paid_successfully') === true && session('last_searched_serial_id')) {
+            $certUid = session('last_searched_serial_id');
+            $paidSuccessfully = true;
+            $searchPerformed = true;
+            $companyName = session('company_name', '');
+            $companyEmail = session('company_email', '');
+            
+            try {
+                $isCentre = str_starts_with($certUid, 'CTR-');
+                if ($isCentre) {
+                    $centre = $this->verificationService->lookupCentre($certUid);
+                    $resultType = 'centre';
+                } else {
+                    $certificate = $this->verificationService->lookupCertificate($certUid);
+                    $resultType = 'certificate';
+                    
+                    // Fetch details
+                    $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
+                    $aStmt = $pdo->prepare("
+                        SELECT a.*, m.title as module_title, m.module_number
+                        FROM assignments a
+                        JOIN modules m ON a.module_id = m.id
+                        WHERE a.user_id = ?
+                        ORDER BY m.module_number ASC
+                    ");
+                    $aStmt->execute([$certificate['student_id']]);
+                    $assignments = $aStmt->fetchAll();
+
+                    $exStmt = $pdo->prepare("
+                        SELECT * FROM exam_attempts
+                        WHERE user_id = ? AND status = 'completed'
+                        ORDER BY score DESC LIMIT 1
+                    ");
+                    $exStmt->execute([$certificate['student_id']]);
+                    $bestExam = $exStmt->fetch();
+                }
+            } catch (Exception $e) {
+                $error = $e->getMessage();
+            }
+        }
+
         return view('lms.verification', [
-            'search_performed' => false,
-            'cert_uid' => trim($request->query('cert_uid', '')),
-            'certificate' => null,
-            'centre' => null,
-            'paid_successfully' => false,
-            'error' => '',
-            'company_name' => '',
-            'company_email' => '',
+            'search_performed' => $searchPerformed,
+            'cert_uid' => $certUid,
+            'certificate' => $certificate,
+            'centre' => $centre,
+            'paid_successfully' => $paidSuccessfully,
+            'assignments' => $assignments,
+            'best_exam' => $bestExam,
+            'error' => $error,
+            'result_type' => $resultType,
+            'company_name' => $companyName ?: trim($request->query('company_name', '')),
+            'company_email' => $companyEmail ?: trim($request->query('company_email', '')),
         ]);
     }
 
@@ -54,6 +109,14 @@ class VerificationController extends Controller
         if (empty($certUid)) {
             $error = 'Please enter a valid Serial ID or Centre ID.';
         } else {
+            // Save to session immediately before Stripe attempt
+            session([
+                'last_searched_serial_id' => $certUid,
+                'company_name' => $request->input('company_name'),
+                'company_email' => $request->input('company_email'),
+                'paid_successfully' => false
+            ]);
+
             try {
                 $isCentre = str_starts_with($certUid, 'CTR-');
                 
@@ -87,14 +150,11 @@ class VerificationController extends Controller
                     $isCentre
                 );
 
-                $paidSuccessfully = true;
-                if ($isCentre) {
-                    $centre = $result['centre'];
-                } else {
-                    $certificate = $result['certificate'];
-                    $assignments = $result['assignments'];
-                    $bestExam = $result['best_exam'];
-                }
+                // Set paid successfully in session and redirect to GET route
+                session(['paid_successfully' => true]);
+                
+                return redirect()->route('lms.verification');
+
             } catch (Exception $e) {
                 $error = $e->getMessage();
             }

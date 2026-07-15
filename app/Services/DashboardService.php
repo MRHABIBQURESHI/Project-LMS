@@ -90,19 +90,24 @@ class DashboardService
             $examPassed = false;
             $resitUnlocked = false;
             foreach ($examResults as $att) {
-                if ($att['score'] >= 70.00 && $att['status'] === 'completed') {
+                if ($att['score'] >= 40.00 && $att['status'] === 'completed') {
                     $examPassed = true;
                 }
             }
             if (!empty($examResults)) {
                 $latestAttempt = end($examResults);
-                if ($latestAttempt['score'] < 70.00 || $latestAttempt['status'] === 'force_submitted_violation') {
+                if ($latestAttempt['score'] < 40.00 || $latestAttempt['status'] === 'force_submitted_violation') {
                     if (!$examPassed) {
                         $examFailed = true;
                         $resitUnlocked = (intval($currentUser['exam_retake_unlocked'] ?? 0) === 1);
                     }
                 }
             }
+
+            // Calculate if Phase II is locked (14-day speed trap check)
+            $regDate = strtotime($currentUser['created_at']);
+            $daysSinceReg = floor((time() - $regDate) / 86400);
+            $phase2Locked = ($daysSinceReg < 14 && intval($currentUser['phase2_expedited'] ?? 0) === 0);
 
             return [
                 'enrollment' => $enrollment,
@@ -117,6 +122,7 @@ class DashboardService
                 'exam_failed' => $examFailed,
                 'exam_passed' => $examPassed,
                 'resit_unlocked' => $resitUnlocked,
+                'phase2_locked' => $phase2Locked,
             ];
         } catch (\PDOException $e) {
             error_log("Error fetching student dashboard data: " . $e->getMessage());
@@ -361,7 +367,7 @@ class DashboardService
                 throw new Exception('VIOLATION_LOCK');
             }
 
-            $passThreshold = 70.00;
+            $passThreshold = 40.00;
             if ($score >= $passThreshold && $status === 'completed') {
                 $examQuery = $pdo->prepare("SELECT faculty_id FROM exams WHERE id = ?");
                 $examQuery->execute([$examId]);
@@ -406,6 +412,21 @@ class DashboardService
                         $this->pdfService->generateCertificatePdf($studentName, $courseTitle, date('Y-m-d'), $certUid, $pdfFullPath);
                     }
                 }
+            } else {
+                if ($status === 'completed') {
+                    // Lock account
+                    $lockStmt = $pdo->prepare("UPDATE users SET account_status = 'locked' WHERE id = ?");
+                    $lockStmt->execute([$userId]);
+
+                    // Fetch details & send WhatsApp Alert
+                    $stdQuery = $pdo->prepare("SELECT whatsapp_number, full_name FROM users WHERE id = ?");
+                    $stdQuery->execute([$userId]);
+                    $usr = $stdQuery->fetch();
+                    if ($usr) {
+                        $whatsappMsg = "CPD UK LONDON REGISTRY Alert: Dear " . $usr['full_name'] . ", your exam score (" . $score . "%) fell below the 40% proficiency threshold. Your student account has been LOCKED. Please pay the £229 Resit Fee to reactivate your assessment terminal.";
+                        $this->mailService->sendWhatsApp($usr['whatsapp_number'], $whatsappMsg);
+                    }
+                }
             }
 
             $pdo->commit();
@@ -431,7 +452,7 @@ class DashboardService
         try {
             $pdo->beginTransaction();
 
-            $chkPassed = $pdo->prepare("SELECT COUNT(*) FROM exam_attempts WHERE user_id = ? AND exam_id = ? AND score >= 70.00 AND status = 'completed'");
+            $chkPassed = $pdo->prepare("SELECT COUNT(*) FROM exam_attempts WHERE user_id = ? AND exam_id = ? AND score >= 40.00 AND status = 'completed'");
             $chkPassed->execute([$userId, $examId]);
             if ($chkPassed->fetchColumn() > 0) {
                 throw new Exception('Your result has been locked. You have already passed this examination.');

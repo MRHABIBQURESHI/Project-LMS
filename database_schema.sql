@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `exams` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `faculty_id` INT NOT NULL,
   `duration_minutes` INT DEFAULT 120,
-  `pass_threshold` INT DEFAULT 70, -- 70% passing grade
+  `pass_threshold` INT DEFAULT 40, -- 40% passing grade
   `total_questions` INT DEFAULT 10,
   FOREIGN KEY (`faculty_id`) REFERENCES `faculties` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -1,0 +1,14 @@
+========================================
+Twilio WhatsApp API Simulation
+To: +447999999999
+Date: 2026-07-15 19:37:58
+Message: CPD UK LONDON REGISTRY Alert: Dear Test Student Fixes, your exam score (35%) fell below the 40% proficiency threshold. Your student account has been LOCKED. Please pay the £229 Resit Fee to reactivate your assessment terminal.
+========================================
+
+========================================
+Twilio WhatsApp API Simulation
+To: +447999999999
+Date: 2026-07-15 19:38:09
+Message: Dear Test Student Fixes, Your Phase II Specialty modules have been manually expedited by the Academic Committee.
+========================================
+
