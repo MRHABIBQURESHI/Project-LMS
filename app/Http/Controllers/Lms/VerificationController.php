@@ -21,7 +21,7 @@ class VerificationController extends Controller
      */
     public function index(Request $request)
     {
-        $certUid = strtoupper(trim($request->query('cert_uid', '')));
+        $certUid = strtoupper(trim($request->query('serial_id', $request->query('cert_uid', ''))));
         
         $searchPerformed = false;
         $paidSuccessfully = false;
@@ -96,7 +96,7 @@ class VerificationController extends Controller
      */
     public function search(Request $request)
     {
-        $certUid = strtoupper(trim($request->input('cert_uid', '')));
+        $certUid = strtoupper(trim($request->input('serial_id', $request->input('cert_uid', ''))));
         
         $error = '';
         $certificate = null;
@@ -180,7 +180,7 @@ class VerificationController extends Controller
      */
     public function verifyView(Request $request)
     {
-        $certUid = strtoupper(trim($request->input('cert_uid', $request->query('cert_uid', ''))));
+        $certUid = strtoupper(trim($request->input('serial_id', $request->input('cert_uid', $request->query('serial_id', $request->query('cert_uid', ''))))));
         
         $success = false;
         $error = '';

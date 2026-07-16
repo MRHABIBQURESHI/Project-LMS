@@ -13,7 +13,7 @@
             icon: isSuccess ? 'success' : 'warning',
             title: isSuccess ? 'Confirmation' : 'Registry Notice',
             text: message,
-            confirmButtonColor: '#002F6C'
+            confirmButtonColor: '#222222'
         });
     };
 </script>
@@ -46,7 +46,7 @@
 
                     <!-- CORPORATE DETAILS & STRIPE FORM -->
                     <div id="corporatePaywallArea" style="border-top: 1.5px solid var(--border-main); padding-top: 20px; margin-top: 20px;">
-                        <h3 style="color:#002F6C; margin-bottom:15px;">Inquirer Details</h3>
+                        <h3 style="color:#222222; margin-bottom:15px;">Inquirer Details</h3>
                         
                         <div class="gov-form-group">
                             <label class="gov-label" for="company_name">Company / Organization Name</label>
@@ -88,7 +88,7 @@
                         <input type="hidden" name="process_corporate_payment" value="1">
                     </div>
 
-                    <button type="submit" class="gov-button" id="searchSubmitBtn" style="width:100%; border-radius:6px; padding: 12px 0; margin-top:15px; background-color: #00703c;">
+                    <button type="submit" class="gov-button" id="searchSubmitBtn" style="width:100%; border-radius:6px; padding: 12px 0; margin-top:15px; background-color: #222222;">
                         Pay £49.00 &amp; Perform Verification
                     </button>
                 </form>
@@ -100,13 +100,13 @@
             
             <!-- A) CENTRE LOOKUP PAID RESULT -->
             @if ($result_type === 'centre' && $centre)
-                <div class="db-card" style="border: 2px solid #002F6C; padding: 30px; border-radius: 8px;">
+                <div class="db-card" style="border: 2px solid #EBF3FC; padding: 30px; border-radius: 8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid var(--border-main); padding-bottom:15px; margin-bottom:20px;">
                         <h2 style="margin:0; border-bottom:none; padding-bottom:0;">Verified Centre Approval Record</h2>
-                        <span class="verify-badge-approved" style="background-color: #00703c; color: white; padding: 4px 10px; border-radius: 4px; font-size:12px; font-weight:bold;">Active &amp; Approved</span>
+                        <span class="verify-badge-approved" style="background-color: #222222; color: white; padding: 4px 10px; border-radius: 4px; font-size:12px; font-weight:bold;">Active &amp; Approved</span>
                     </div>
 
-                    <h3 style="color:#002F6C; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">1. Academic Centre Profile</h3>
+                    <h3 style="color:#222222; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">1. Academic Centre Profile</h3>
                     <div class="gov-list-group" style="border-top:none; margin:0 0 25px 0;">
                         <div class="gov-list-row">
                             <span class="gov-list-key">Approved Centre Name</span>
@@ -114,7 +114,7 @@
                         </div>
                         <div class="gov-list-row">
                             <span class="gov-list-key">Verified Centre ID</span>
-                            <span class="gov-list-value" style="font-family:monospace; font-weight:600; color:#002F6C;">{{ $centre['rep_code'] }}</span>
+                            <span class="gov-list-value" style="font-family:monospace; font-weight:600; color:#222222;">{{ $centre['rep_code'] }}</span>
                         </div>
                         <div class="gov-list-row">
                             <span class="gov-list-key">Contact Details</span>
@@ -122,7 +122,7 @@
                         </div>
                     </div>
 
-                    <h3 style="color:#002F6C; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">2. Registry Validation Status</h3>
+                    <h3 style="color:#222222; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">2. Registry Validation Status</h3>
                     <div class="gov-list-group" style="border-top:none; margin:0 0 25px 0;">
                         <div class="gov-list-row">
                             <span class="gov-list-key">Validation Status</span>
@@ -146,13 +146,13 @@
 
             <!-- B) CERTIFICATE LOOKUP PAID RESULT -->
             @elseif ($result_type === 'certificate' && $certificate)
-                <div class="db-card" style="border: 2px solid #002F6C; padding: 30px; border-radius: 8px;">
+                <div class="db-card" style="border: 2px solid #EBF3FC; padding: 30px; border-radius: 8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid var(--border-main); padding-bottom:15px; margin-bottom:20px;">
                         <h2 style="margin:0; border-bottom:none; padding-bottom:0;">Verifiable Academic Record Profile</h2>
                         <span class="verify-badge-approved">Active &amp; Verified</span>
                     </div>
 
-                    <h3 style="color:#002F6C; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">1. Candidate Personal Dossier</h3>
+                    <h3 style="color:#222222; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">1. Candidate Personal Dossier</h3>
                     <div class="gov-list-group" style="border-top:none; margin:0 0 25px 0;">
                         <div class="gov-list-row">
                             <span class="gov-list-key">Candidate Full Name</span>
@@ -168,11 +168,11 @@
                         </div>
                     </div>
 
-                    <h3 style="color:#002F6C; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">2. Program Credentials Details</h3>
+                    <h3 style="color:#222222; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">2. Program Credentials Details</h3>
                     <div class="gov-list-group" style="border-top:none; margin:0 0 25px 0;">
                         <div class="gov-list-row">
                             <span class="gov-list-key">Award Reference UID</span>
-                            <span class="gov-list-value" style="font-family:monospace; font-weight:600; color:#002F6C;">{{ $certificate['certificate_uid'] }}</span>
+                            <span class="gov-list-value" style="font-family:monospace; font-weight:600; color:#222222;">{{ $certificate['certificate_uid'] }}</span>
                         </div>
                         <div class="gov-list-row">
                             <span class="gov-list-key">Faculty Program</span>
@@ -188,7 +188,7 @@
                         </div>
                     </div>
 
-                    <h3 style="color:#002F6C; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">3. Coursework Modules Transcript</h3>
+                    <h3 style="color:#222222; margin-bottom:15px; border-bottom:1px solid var(--border-main); padding-bottom:5px;">3. Coursework Modules Transcript</h3>
                     <table class="gov-table" style="margin-bottom: 25px;">
                         <thead>
                             <tr>
