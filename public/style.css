@@ -36,6 +36,8 @@
 
     --nav-active-bg: #EBF3FC;
     --nav-hover-bg: #EBF3FC;
+    --nav-active-text: #002F6C;
+    --nav-hover-text: #002F6C;
 
     --btn-primary-bg: #222222;
     --btn-primary-text: #ffffff;
@@ -76,6 +78,8 @@
 
     --nav-active-bg: rgba(138, 180, 248, 0.12);
     --nav-hover-bg: rgba(138, 180, 248, 0.06);
+    --nav-active-text: #ffffff;
+    --nav-hover-text: #ffffff;
 
     --btn-primary-bg: #3b6cb5;
     --btn-primary-text: #ffffff;
@@ -739,12 +743,12 @@ body.db-body {
 
 .db-nav-item a:hover {
     background-color: var(--nav-hover-bg);
-    color: #ffffff;
+    color: var(--nav-hover-text);
 }
 
 .db-nav-item.active a {
     background-color: var(--nav-active-bg);
-    color: #ffffff;
+    color: var(--nav-active-text);
     font-weight: 600;
 }
 
@@ -781,7 +785,7 @@ body.db-body {
 .db-user-name {
     font-size: 14px;
     font-weight: 600;
-    color: #ffffff !important;
+    color: var(--text-sidebar) !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
