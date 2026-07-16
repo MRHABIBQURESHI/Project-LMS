@@ -17,7 +17,7 @@
                 <img src="{{ asset('assets/images/logo.png') }}" alt="Logo" style="max-height: 40px; object-fit: contain;">
                 <div style="display: flex; flex-direction: column;">
                     <span class="gov-header-title" style="line-height: 1.1;">CPD UK LONDON REGISTRY</span>
-                    <span style="font-size: 10px; color: rgba(255, 255, 255, 0.75); font-weight: normal; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px;">CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD</span>
+                    <span style="font-size: 10px; color: #777777; font-weight: normal; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px;">CPD UK LONDON | INTERNATIONAL CERTIFICATION AWARD BOARD</span>
                 </div>
             </a>
             <div class="gov-header-nav">
