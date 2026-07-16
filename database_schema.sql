@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS `modules` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `faculty_id` INT DEFAULT NULL, -- Nullable for universal modules 1 & 2
   `module_number` INT NOT NULL,
+  `phase` VARCHAR(10) NOT NULL DEFAULT 'I',
   `title` VARCHAR(255) NOT NULL,
   `content_type` ENUM('text', 'video') DEFAULT 'text',
   `content_path` TEXT NOT NULL,
@@ -50,7 +51,7 @@ CREATE TABLE IF NOT EXISTS `exams` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `faculty_id` INT NOT NULL,
   `duration_minutes` INT DEFAULT 120,
-  `pass_threshold` INT DEFAULT 40, -- 40% passing grade
+  `pass_threshold` INT DEFAULT 50, -- 50% passing grade
   `total_questions` INT DEFAULT 10,
   FOREIGN KEY (`faculty_id`) REFERENCES `faculties` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -113,26 +114,26 @@ ON DUPLICATE KEY UPDATE `name`=`name`;
 
 -- Seed default Modules
 -- Universal Modules 1 & 2 (faculty_id = NULL)
-INSERT INTO `modules` (`id`, `faculty_id`, `module_number`, `title`, `content_type`, `content_path`) VALUES
-(1, NULL, 1, 'LMS Orientation and Ethics', 'text', 'Welcome to UK London International Award Board. This universal module introduces the ethics of independent academic research, anti-plagiarism guidelines, and operational rules.'),
-(2, NULL, 2, 'Research Methods and Technical Writing', 'text', 'Learn structure guidelines for composing academic write-ups, references tracking, and reporting data accurately.')
+INSERT INTO `modules` (`id`, `faculty_id`, `module_number`, `phase`, `title`, `content_type`, `content_path`) VALUES
+(1, NULL, 1, 'I', 'Academic English', 'text', 'Foundational guidelines for academic English communication, research reporting, and structural grammar.'),
+(2, NULL, 2, 'I', 'Advanced Mathematics', 'text', 'Advanced mathematical concepts, statistical analysis, and data modeling for academic research.')
 ON DUPLICATE KEY UPDATE `title`=`title`;
 
 -- Conditional Modules 3 & 4 (Faculty specific)
-INSERT INTO `modules` (`id`, `faculty_id`, `module_number`, `title`, `content_type`, `content_path`) VALUES
-(3, 1, 3, 'Advanced Business Administration', 'text', 'Understanding business operational management, human capital strategy, and startup finance workflows.'),
-(4, 1, 4, 'Global Supply Chain Management', 'text', 'Logistics coordination, procurement protocols, and international supply chain ethics.'),
-(5, 2, 3, 'Clinical Health Principles', 'text', 'Foundation guidelines for clinical environments, hygiene compliance, and patient data safety.'),
-(6, 2, 4, 'Public Health Administration', 'text', 'Analyzing community health policy, regional clinical distribution, and pandemic protocol audits.'),
-(7, 3, 3, 'Principles of Human Nutrition', 'text', 'Macronutrients profiles, clinical digestion pathways, and cellular health parameters.'),
-(8, 3, 4, 'Dietary Therapy Planning', 'text', 'Designing target menu plans for clinical diabetes, cardiovascular risk reduction, and specialized diets.')
+INSERT INTO `modules` (`id`, `faculty_id`, `module_number`, `phase`, `title`, `content_type`, `content_path`) VALUES
+(3, 1, 3, 'I', 'Essential Sciences', 'text', 'Fundamental scientific principles, empirical observation, and methodological inquiry.'),
+(4, 1, 4, 'II', 'Global Supply Chain Management', 'text', 'Logistics coordination, procurement protocols, and international supply chain ethics.'),
+(5, 2, 3, 'I', 'Essential Sciences', 'text', 'Fundamental scientific principles, empirical observation, and methodological inquiry.'),
+(6, 2, 4, 'II', 'Public Health Administration', 'text', 'Analyzing community health policy, regional clinical distribution, and pandemic protocol audits.'),
+(7, 3, 3, 'I', 'Essential Sciences', 'text', 'Fundamental scientific principles, empirical observation, and methodological inquiry.'),
+(8, 3, 4, 'II', 'Dietary Therapy Planning', 'text', 'Designing target menu plans for clinical diabetes, cardiovascular risk reduction, and specialized diets.')
 ON DUPLICATE KEY UPDATE `title`=`title`;
 
 -- Seed default Exams
 INSERT INTO `exams` (`id`, `faculty_id`, `duration_minutes`, `pass_threshold`, `total_questions`) VALUES
-(1, 1, 120, 70, 10),
-(2, 2, 120, 70, 10),
-(3, 3, 120, 70, 10)
+(1, 1, 120, 50, 10),
+(2, 2, 120, 50, 10),
+(3, 3, 120, 50, 10)
 ON DUPLICATE KEY UPDATE `duration_minutes`=`duration_minutes`;
 
 -- Seed default Admin and Student accounts for testing

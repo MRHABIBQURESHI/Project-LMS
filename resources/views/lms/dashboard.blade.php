@@ -458,7 +458,7 @@
                                     <ul style="font-size:14px; line-height:1.8; color:var(--text-primary); margin-left:20px; list-style-type: disc;">
                                         <li><strong>Coursework:</strong> Review the universal and faculty coursework modules, and submit your homework assignments for evaluation.</li>
                                         <li><strong>Timed Exam:</strong> Once you are ready, start your comprehensive timed assessment exam (2-hour limit). Ensure you maintain window focus, as switching tabs will trigger security lockouts.</li>
-                                        <li><strong>Certificate:</strong> A Gold Crest verifiable diploma certificate is generated automatically upon passing the final assessment with a grade of 40% or higher.</li>
+                                        <li><strong>Certificate:</strong> A Gold Crest verifiable diploma certificate is generated automatically upon passing the final assessment with a grade of 50% or higher.</li>
                                     </ul>
                                 </div>
                             </div>
@@ -512,7 +512,7 @@
                                             <span class="gov-tag gov-tag-grey" style="font-size: 10px;">Awaiting Submission</span>
                                         @endif
 
-                                        @if (!empty($phase2_locked) && $mod['faculty_id'] !== NULL)
+                                        @if (!empty($phase2_locked) && $mod['phase'] === 'II')
                                             <div style="background-color: #fff9e6; color: #663c00; font-size:12px; padding: 10px; border-radius: 4px; width: 100%; margin-top: 8px;">
                                                 ⚠️ This specialty module is locked under the 14-day speed trap protocol. Access opens on Day 15 (or request a manual override from the academic committee).
                                             </div>
@@ -535,7 +535,7 @@
                         <!-- Exams card -->
                         <div class="db-card" id="examsSection">
                             <div class="db-card-title">Faculty Timed Assessment</div>
-                            <p style="font-size: 14px; margin-bottom: 20px;">Complete your timed examination. Anti-cheat visibility tracking metrics are active. Minimum passing grade is 40%.</p>
+                            <p style="font-size: 14px; margin-bottom: 20px;">Complete your timed examination. Anti-cheat visibility tracking metrics are active. Minimum passing grade is 50%.</p>
 
                             <div class="gov-list-group" style="margin-top: 10px; margin-bottom: 0;">
                                 @if (empty($active_exam))
@@ -545,12 +545,12 @@
                                         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
                                             <div>
                                                 <span class="gov-list-key">Timed Comprehensive Assessment</span>
-                                                <span class="gov-hint" style="margin-top: 5px;">Pass Threshold: 40% | Duration: {{ $active_exam['duration_minutes'] }} mins</span>
+                                                <span class="gov-hint" style="margin-top: 5px;">Pass Threshold: 50% | Duration: {{ $active_exam['duration_minutes'] }} mins</span>
                                             </div>
                                             <div>
                                                 @if (!empty($exam_results))
                                                     @php $latest_attempt = end($exam_results); @endphp
-                                                    <span class="gov-tag {{ $latest_attempt['score'] >= 40 ? 'gov-tag-green' : 'gov-tag-yellow' }}">
+                                                    <span class="gov-tag {{ $latest_attempt['score'] >= 50 ? 'gov-tag-green' : 'gov-tag-yellow' }}">
                                                         Score: {{ $latest_attempt['score'] }}% ({{ strtoupper($latest_attempt['status']) }})
                                                     </span>
                                                 @else
@@ -563,7 +563,7 @@
                                             @if ($exam_passed)
                                                 <div style="background-color: #fafcff; padding: 20px; border-left: 5px solid #00703c; border-radius: 4px; width:100%;">
                                                     <h3 style="color:#00703c; margin-bottom:8px; font-size:14px; font-weight:bold;">✓ Assessment Passed & Locked</h3>
-                                                    <p style="font-size:12px; color:#555; margin-bottom:0; line-height:1.45;">You have successfully passed the final assessment with a score of 40% or higher. Your result is locked and your certificate has been awarded. You can view or download it from the Certificates tab.</p>
+                                                    <p style="font-size:12px; color:#555; margin-bottom:0; line-height:1.45;">You have successfully passed the final assessment with a score of 50% or higher. Your result is locked and your certificate has been awarded. You can view or download it from the Certificates tab.</p>
                                                 </div>
                                             @elseif ($exam_failed)
                                                 @if ($resit_unlocked)
@@ -578,7 +578,7 @@
                                                     <!-- Render Resit Paywall Form -->
                                                     <div style="background-color: #fafbfe; padding: 20px; border-left: 5px solid #d4351c; border-radius: 4px; width:100%;">
                                                         <h3 style="color:#d4351c; margin-bottom:8px; font-size:14px;">Assessment Resit Paywall</h3>
-                                                        <p style="font-size:12px; color:#555; margin-bottom:15px; line-height:1.45;">You did not achieve the required passing threshold of 40% on your exam attempt. To reactivate the assessment terminal and try again, you must process the Board Resit Fee of <strong>£229.00</strong>.</p>
+                                                        <p style="font-size:12px; color:#555; margin-bottom:15px; line-height:1.45;">You did not achieve the required passing threshold of 50% on your exam attempt. To reactivate the assessment terminal and try again, you must process the Board Resit Fee of <strong>£229.00</strong>.</p>
                                                         
                                                         <form action="{{ route('lms.dashboard') }}?page=exams" method="POST" style="max-width:360px;">
                                                             @csrf
@@ -622,7 +622,7 @@
                             <div class="db-card-title">Verifiable Issued Certificate Credentials</div>
                             <div class="gov-list-group" style="margin-top: 10px; margin-bottom: 0;">
                                 @if (empty($certificates))
-                                    <p class="gov-hint" style="padding: 10px 0;">No certificates issued yet. Pass your exam with 40% or more to unlock.</p>
+                                    <p class="gov-hint" style="padding: 10px 0;">No certificates issued yet. Pass your exam with 50% or more to unlock.</p>
                                 @else
                                     @foreach ($certificates as $c)
                                         <div class="gov-list-row" style="padding: 15px 0;">
@@ -1145,7 +1145,7 @@
                                                         <tr>
                                                             <td>{{ $ve['end_time'] }}</td>
                                                             <td>
-                                                                <strong>{{ $ve['score'] }}%</strong> (Threshold: 40%)
+                                                                <strong>{{ $ve['score'] }}%</strong> (Threshold: 50%)
                                                                 <form action="{{ route('lms.dashboard') }}?page=students&view_id={{ $viewId }}" method="POST" style="margin-top:6px; display:block;">
                                                                     @csrf
                                                                     <input type="hidden" name="edit_exam_score" value="1">
@@ -1162,7 +1162,7 @@
                                                             </td>
                                                             <td>{{ $ve['violation_count'] }} Violations</td>
                                                             <td>
-                                                                <span class="gov-tag {{ $ve['score'] >= 40 ? 'gov-tag-green' : 'gov-tag-yellow' }}" style="font-size:10px; text-transform:none;">
+                                                                <span class="gov-tag {{ $ve['score'] >= 50 ? 'gov-tag-green' : 'gov-tag-yellow' }}" style="font-size:10px; text-transform:none;">
                                                                     {{ $ve['status'] }}
                                                                 </span>
                                                             </td>

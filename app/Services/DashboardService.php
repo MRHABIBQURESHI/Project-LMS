@@ -90,13 +90,13 @@ class DashboardService
             $examPassed = false;
             $resitUnlocked = false;
             foreach ($examResults as $att) {
-                if ($att['score'] >= 40.00 && $att['status'] === 'completed') {
+                if ($att['score'] >= 50.00 && $att['status'] === 'completed') {
                     $examPassed = true;
                 }
             }
             if (!empty($examResults)) {
                 $latestAttempt = end($examResults);
-                if ($latestAttempt['score'] < 40.00 || $latestAttempt['status'] === 'force_submitted_violation') {
+                if ($latestAttempt['score'] < 50.00 || $latestAttempt['status'] === 'force_submitted_violation') {
                     if (!$examPassed) {
                         $examFailed = true;
                         $resitUnlocked = (intval($currentUser['exam_retake_unlocked'] ?? 0) === 1);
@@ -262,6 +262,25 @@ class DashboardService
     {
         $pdo = DB::connection()->getPdo();
 
+        // Enforcement of 14-day speed trap check for Phase II modules
+        $modQuery = $pdo->prepare("SELECT * FROM modules WHERE id = ?");
+        $modQuery->execute([$moduleId]);
+        $module = $modQuery->fetch();
+        if ($module) {
+            $usrQuery = $pdo->prepare("SELECT created_at, phase2_expedited FROM users WHERE id = ?");
+            $usrQuery->execute([$userId]);
+            $user = $usrQuery->fetch();
+            if ($user) {
+                $regDate = strtotime($user['created_at']);
+                $daysSinceReg = floor((time() - $regDate) / 86400);
+                $isExpedited = intval($user['phase2_expedited'] ?? 0) === 1;
+
+                if ($module['phase'] === 'II' && $daysSinceReg < 14 && !$isExpedited) {
+                    throw new Exception('This coursework module is locked under the 14-day speed protection protocol. Access opens on Day 15.');
+                }
+            }
+        }
+
         $fileTmpPath = '';
         $fileName = '';
         $fileSize = 0;
@@ -367,7 +386,7 @@ class DashboardService
                 throw new Exception('VIOLATION_LOCK');
             }
 
-            $passThreshold = 40.00;
+            $passThreshold = 50.00;
             if ($score >= $passThreshold && $status === 'completed') {
                 $examQuery = $pdo->prepare("SELECT faculty_id FROM exams WHERE id = ?");
                 $examQuery->execute([$examId]);
@@ -423,7 +442,7 @@ class DashboardService
                     $stdQuery->execute([$userId]);
                     $usr = $stdQuery->fetch();
                     if ($usr) {
-                        $whatsappMsg = "CPD UK LONDON REGISTRY Alert: Dear " . $usr['full_name'] . ", your exam score (" . $score . "%) fell below the 40% proficiency threshold. Your student account has been LOCKED. Please pay the £229 Resit Fee to reactivate your assessment terminal.";
+                        $whatsappMsg = "CPD UK LONDON REGISTRY Alert: Dear " . $usr['full_name'] . ", your exam score (" . $score . "%) fell below the 50% proficiency threshold. Your student account has been LOCKED. Please pay the £229 Resit Fee to reactivate your assessment terminal.";
                         $this->mailService->sendWhatsApp($usr['whatsapp_number'], $whatsappMsg);
                     }
                 }
@@ -452,7 +471,7 @@ class DashboardService
         try {
             $pdo->beginTransaction();
 
-            $chkPassed = $pdo->prepare("SELECT COUNT(*) FROM exam_attempts WHERE user_id = ? AND exam_id = ? AND score >= 40.00 AND status = 'completed'");
+            $chkPassed = $pdo->prepare("SELECT COUNT(*) FROM exam_attempts WHERE user_id = ? AND exam_id = ? AND score >= 50.00 AND status = 'completed'");
             $chkPassed->execute([$userId, $examId]);
             if ($chkPassed->fetchColumn() > 0) {
                 throw new Exception('Your result has been locked. You have already passed this examination.');
