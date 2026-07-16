@@ -25,9 +25,9 @@
 
     <!-- Search Form that Triggers Stripe Gateway Modal -->
     <form onsubmit="event.preventDefault(); openStripeModal();" style="display: flex; flex-direction: column; gap: 10px; max-width: 700px;">
-        <label for="homepage_serial_id" style="font-size: 14px; font-weight: 600; color: #222222;">Enter Certificate Serial ID or Centre ID (e.g. REG-LON-2026-00001 or CTR-LDN-2026-00001)</label>
+        <label for="homepage_serial_id" style="font-size: 14px; font-weight: 600; color: #222222;">Enter Certificate Serial ID or Centre ID (e.g. REG-LDN-2026-00001 or CTR-LDN-2026-00001)</label>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <input class="gov-input" type="text" id="homepage_serial_id" name="serial_id" placeholder="Enter Certificate Serial ID or Centre ID" required style="flex-grow: 1; min-width: 280px; height: 44px; border: 1.5px solid #EBF3FC; border-radius: 6px; padding: 10px 15px; font-size: 14px; background-color: #FFFFFF; color: #222222;">
+            <input class="gov-input" type="text" id="homepage_serial_id" name="serial_id" placeholder="REG-LDN-2026-00001 or CTR-LDN-2026-00001" required style="flex-grow: 1; min-width: 280px; height: 44px; border: 1.5px solid #EBF3FC; border-radius: 6px; padding: 10px 15px; font-size: 14px; background-color: #FFFFFF; color: #222222;">
             <button type="submit" class="gov-button" style="white-space: nowrap; margin-top: 0; padding: 12px 28px; height: 44px; border-radius: 6px; border-bottom: none; background-color: #222222; color: #ffffff; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">Validate Serial ID</button>
         </div>
     </form>
@@ -96,10 +96,11 @@
         <div class="gov-grid-column-one-half" style="flex: 1; min-width: 300px; border-left: 1.5px solid #EBF3FC; padding-left: 30px;">
             <h3 style="color: #222222; font-size: 16px; font-weight: 600; margin-top: 0; margin-bottom: 12px;">Page 4: Tuition Clearance & Resit Scheduling</h3>
             <ul style="font-size: 13.5px; color: #222222; line-height: 1.8; margin-left: 20px; list-style-type: square; padding-left: 0;">
-                <li style="margin-bottom: 10px;"><strong>Program Fees Schedule:</strong> Complete tuition clearance is fixed at £2,249 full price or cleared in three sequential installments of £749 each.</li>
-                <li style="margin-bottom: 10px;"><strong>Passing Threshold:</strong> Assessment validation is configured at 40%. A score below 40% constitutes a fail, triggering account lockout.</li>
+                <li style="margin-bottom: 10px;"><strong>Program Fees Schedule:</strong> Complete tuition clearance is fixed at £2,249 full price or cleared in three sequential installments starting with £751 followed by two payments of £749 each.</li>
+                <li style="margin-bottom: 10px;"><strong>Passing Threshold:</strong> Assessment validation is configured at 50%. A score below 50% constitutes a fail, triggering account lockout.</li>
                 <li style="margin-bottom: 10px;"><strong>Resit Terminal Reactivation:</strong> Failed assessments require a Board Resit Fee of £229 to restore testing tokens. Retakes are managed under academic guidelines.</li>
             </ul>
+            <div style="font-size: 12px; color: #555555; margin-top: 15px;">*Optional Partner University Placement Concierge package available post-graduation for £249.</div>
         </div>
     </div>
 </div>
