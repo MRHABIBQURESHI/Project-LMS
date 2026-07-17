@@ -37,6 +37,8 @@
         @yield('content')
     </main>
 
+    @include('lms.footer')
+
     <!-- Floating WhatsApp Support Button -->
     <a href="https://wa.me/447000000000" target="_blank" class="whatsapp-float-btn" aria-label="Chat with Support on WhatsApp">
         <svg viewBox="0 0 24 24" class="whatsapp-icon" xmlns="http://www.w3.org/2000/svg">

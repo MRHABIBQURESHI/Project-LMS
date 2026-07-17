@@ -1992,6 +1992,43 @@ html:has(body.db-body), body.db-body {
     scrollbar-width: none !important;  /* Firefox */
 }
 
+/* Premium Responsive Footer */
+.gov-footer {
+    background-color: var(--bg-card);
+    border-top: 1.5px solid var(--border-main);
+    margin-top: 60px;
+    padding: 50px 0 30px 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.gov-footer-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 2fr 1fr 1fr;
+    gap: 30px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    box-sizing: border-box;
+}
+
+@media (max-width: 991px) {
+    .gov-footer-container {
+        grid-template-columns: 1fr 1fr;
+        gap: 40px 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .gov-footer-container {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+}
+
 
 
 
