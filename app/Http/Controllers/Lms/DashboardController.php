@@ -333,6 +333,26 @@ class DashboardController extends Controller
                         $successMsg = '14-Day speed lock re-applied successfully.';
                     }
                 }
+
+                // 14. Add Course (Faculty)
+                elseif ($request->has('add_course')) {
+                    $this->dashboardService->addCourse($request->all());
+                    $successMsg = 'Course added successfully.';
+                }
+
+                // 15. Edit Course (Faculty)
+                elseif ($request->has('edit_course')) {
+                    $courseId = intval($request->input('course_id'));
+                    $this->dashboardService->editCourse($courseId, $request->all());
+                    $successMsg = 'Course updated successfully.';
+                }
+
+                // 16. Delete Course (Faculty)
+                elseif ($request->has('delete_course')) {
+                    $courseId = intval($request->input('delete_id'));
+                    $this->dashboardService->deleteCourse($courseId);
+                    $successMsg = 'Course deleted successfully.';
+                }
             }
 
             // UNIVERSAL ACTIONS

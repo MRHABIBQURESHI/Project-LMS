@@ -41,6 +41,13 @@
 
     --btn-primary-bg: #222222;
     --btn-primary-text: #ffffff;
+
+    --btn-edit-bg: #e2eefb;
+    --btn-edit-text: #002F6C;
+    --btn-delete-bg: #fdf2f0;
+    --btn-delete-text: #d4351c;
+    --btn-view-bg: #e6f6ee;
+    --btn-view-text: #00703c;
 }
 
 /* ====================================================================== */
@@ -83,6 +90,13 @@
 
     --btn-primary-bg: #3b6cb5;
     --btn-primary-text: #ffffff;
+
+    --btn-edit-bg: rgba(138, 180, 248, 0.15);
+    --btn-edit-text: #8ab4f8;
+    --btn-delete-bg: rgba(242, 139, 130, 0.15);
+    --btn-delete-text: #f28b82;
+    --btn-view-bg: rgba(129, 201, 149, 0.15);
+    --btn-view-text: #81c784;
 }
 
 /* ====================================================================== */
@@ -123,6 +137,13 @@
 
     --btn-primary-bg: #5a3e1b;
     --btn-primary-text: #ffffff;
+
+    --btn-edit-bg: #f4edd2;
+    --btn-edit-text: #5c3c10;
+    --btn-delete-bg: #f8dfd4;
+    --btn-delete-text: #a8200d;
+    --btn-view-bg: #e0eed4;
+    --btn-view-text: #2f5c10;
 }
 
 * {
@@ -669,13 +690,16 @@ a:hover {
 /* Sidebar App Shell Layout */
 .db-layout-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background-color: var(--bg-secondary);
 }
 
-body.db-body {
+html:has(body.db-body), body.db-body {
     padding-bottom: 0 !important;
     background-color: var(--bg-secondary) !important;
+    height: 100vh !important;
+    overflow: hidden !important;
 }
 
 .db-sidebar {
@@ -804,6 +828,8 @@ body.db-body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
     min-width: 0;
     transition: margin-left 0.3s ease;
 }
@@ -811,7 +837,8 @@ body.db-body {
 /* Topbar Header */
 .db-topbar {
     height: 70px;
-    background-color: var(--bg-sidebar);
+    background-color: var(--bg-topbar);
+    border-bottom: 1.5px solid var(--border-main);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -823,17 +850,17 @@ body.db-body {
 }
 
 .db-topbar .theme-toggle-btn {
-    border-color: rgba(255, 255, 255, 0.25) !important;
-    color: #ffffff !important;
+    border: 1.5px solid var(--border-main) !important;
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
 }
 
 .db-topbar .theme-toggle-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-color: #ffffff !important;
+    background-color: var(--bg-secondary) !important;
 }
 
 .db-topbar .db-topbar-icon {
-    color: #ffffff !important;
+    color: var(--text-primary) !important;
 }
 
 .db-search-mock {
@@ -874,6 +901,8 @@ body.db-body {
     max-width: 1200px;
     width: 100%;
     margin: 0 auto;
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
 /* Redesigned Cards */
@@ -957,7 +986,7 @@ body.db-body {
     font-size: 24px;
     background: none;
     border: none;
-    color: #ffffff;
+    color: var(--text-primary);
     cursor: pointer;
     margin-right: 15px;
 }
@@ -1008,22 +1037,32 @@ body.db-body {
 }
 
 .btn-edit {
-    background-color: #e2eefb;
-    color: #002F6C;
+    background-color: var(--btn-edit-bg);
+    color: var(--btn-edit-text);
     margin-right: 6px;
 }
 
 .btn-edit:hover {
-    background-color: #c4d6eb;
+    filter: brightness(0.92);
 }
 
 .btn-delete {
-    background-color: #fdf2f0;
-    color: #d4351c;
+    background-color: var(--btn-delete-bg);
+    color: var(--btn-delete-text);
 }
 
 .btn-delete:hover {
-    background-color: #f8d7da;
+    filter: brightness(0.92);
+}
+
+.btn-view {
+    background-color: var(--btn-view-bg);
+    color: var(--btn-view-text);
+    margin-right: 6px;
+}
+
+.btn-view:hover {
+    filter: brightness(0.92);
 }
 
 /* Modals Overlay */
@@ -1815,6 +1854,142 @@ body.db-body {
 
 .stripe-btn-submit:hover {
     background-color: #333333;
+}
+
+/* Floating WhatsApp CTA Button */
+.whatsapp-float-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background-color: #25d366;
+    color: #ffffff !important;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(37, 211, 102, 0.4);
+    z-index: 9999;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.whatsapp-float-btn:hover {
+    transform: scale(1.1) rotate(5deg);
+    background-color: #20ba5a;
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
+}
+
+.whatsapp-icon {
+    width: 32px;
+    height: 32px;
+    fill: #ffffff;
+}
+
+/* Tooltip on hover */
+.whatsapp-float-btn .whatsapp-tooltip {
+    visibility: hidden;
+    width: 140px;
+    background-color: #333333;
+    color: #ffffff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 6px 10px;
+    position: absolute;
+    right: 75px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+}
+
+.whatsapp-float-btn .whatsapp-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent transparent #333333;
+}
+
+.whatsapp-float-btn:hover .whatsapp-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Pulse animation */
+@keyframes whatsappPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(37, 211, 102, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+    }
+}
+
+.whatsapp-float-btn {
+    animation: whatsappPulse 2s infinite;
+}
+
+/* Premium Table Scroll Wrapper */
+.premium-table-wrapper {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 290px);
+    border: 1.5px solid var(--border-main);
+    border-radius: 8px;
+    margin-top: 15px;
+    background-color: var(--bg-card);
+    transition: border-color 0.3s;
+}
+
+/* Let's style the inner tables inside this wrapper to look premium */
+.premium-table-wrapper .gov-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: collapse;
+    border: none;
+}
+
+.premium-table-wrapper .gov-table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--bg-secondary);
+    border-bottom: 1.5px solid var(--border-main);
+    color: var(--text-heading);
+    font-weight: 600;
+}
+
+.premium-table-wrapper .gov-table td {
+    border-bottom: 1px solid var(--border-main);
+    vertical-align: middle;
+}
+
+/* Hide scrollbars globally on dashboard content and tables */
+.premium-table-wrapper::-webkit-scrollbar,
+.db-content::-webkit-scrollbar,
+.db-main::-webkit-scrollbar {
+    display: none !important;
+}
+
+.premium-table-wrapper,
+.db-content,
+.db-main {
+    -ms-overflow-style: none !important;  /* IE and Edge */
+    scrollbar-width: none !important;  /* Firefox */
 }
 
 

@@ -4,7 +4,11 @@
 
 CREATE TABLE IF NOT EXISTS `faculties` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `name` VARCHAR(255) NOT NULL
+  `name` VARCHAR(255) NOT NULL,
+  `code` VARCHAR(50) DEFAULT NULL,
+  `duration` VARCHAR(100) DEFAULT NULL,
+  `fee` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `description` TEXT DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `users` (
@@ -13,12 +17,21 @@ CREATE TABLE IF NOT EXISTS `users` (
   `dob` DATE NOT NULL,
   `email` VARCHAR(255) UNIQUE NOT NULL,
   `whatsapp_number` VARCHAR(50) NOT NULL,
+  `street_address` VARCHAR(255) NOT NULL,
+  `city` VARCHAR(100) NOT NULL,
+  `country` VARCHAR(100) NOT NULL,
+  `zip_code` VARCHAR(50) DEFAULT NULL,
   `password_hash` VARCHAR(255) NOT NULL,
   `role` ENUM('student', 'admin') NOT NULL DEFAULT 'student',
   `faculty_id` INT DEFAULT NULL,
   `rep_code` VARCHAR(50) DEFAULT NULL,
   `account_status` ENUM('active', 'pending_manual_unlock', 'locked') DEFAULT 'active',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `id_document_path` VARCHAR(255) DEFAULT NULL,
+  `exam_retake_unlocked` TINYINT(1) DEFAULT 0,
+  `prior_learning_level` VARCHAR(255) DEFAULT NULL,
+  `prior_learning_doc_path` VARCHAR(255) DEFAULT NULL,
+  `phase2_expedited` TINYINT(1) DEFAULT 0,
   FOREIGN KEY (`faculty_id`) REFERENCES `faculties` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

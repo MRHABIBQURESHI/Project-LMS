@@ -149,8 +149,27 @@ class DashboardService
         $approvedAffiliates = [];
         $certificateRegistry = [];
         $studentsList = [];
+        $coursesList = [];
 
         try {
+            if ($page === 'courses' || $page === 'students') {
+                $queryStr = "SELECT f.*, 
+                               (SELECT COUNT(*) FROM modules m WHERE m.faculty_id = f.id OR m.faculty_id IS NULL) as modules_count,
+                               (SELECT COUNT(*) FROM users u WHERE u.faculty_id = f.id AND u.role = 'student') as students_count 
+                            FROM faculties f";
+                $params = [];
+                if ($page === 'courses' && !empty($search)) {
+                    $queryStr .= " WHERE f.name LIKE ?";
+                    $params[] = '%' . $search . '%';
+                }
+                $queryStr .= " ORDER BY f.id ASC";
+                $coursesStmt = $pdo->prepare($queryStr);
+                $coursesStmt->execute($params);
+                $coursesList = $coursesStmt->fetchAll();
+            } else {
+                $coursesList = $pdo->query("SELECT * FROM faculties ORDER BY id ASC")->fetchAll();
+            }
+
             $pendingGrading = $pdo->query("SELECT a.*, u.full_name as student_name, m.title as module_title, m.module_number FROM assignments a JOIN users u ON a.user_id = u.id JOIN modules m ON a.module_id = m.id WHERE a.status = 'pending'")->fetchAll();
             $pendingRemittance = $pdo->query("SELECT p.*, u.full_name as student_name, u.email as student_email FROM payments p JOIN users u ON p.user_id = u.id WHERE p.status = 'pending_manual_unlock'")->fetchAll();
             $affiliateApplications = $pdo->query("SELECT * FROM affiliates WHERE application_status = 'pending'")->fetchAll();
@@ -207,6 +226,33 @@ class DashboardService
                 }
             }
 
+            $viewCourse = null;
+            $viewCourseModules = [];
+            $viewCourseStudents = [];
+            $viewCourseExams = [];
+
+            if ($page === 'courses' && $viewId) {
+                $cStmt = $pdo->prepare("SELECT * FROM faculties WHERE id = ?");
+                $cStmt->execute([$viewId]);
+                $viewCourse = $cStmt->fetch();
+
+                if ($viewCourse) {
+                    $viewCourse = (array) $viewCourse;
+                    
+                    $mStmt = $pdo->prepare("SELECT * FROM modules WHERE faculty_id = ? OR faculty_id IS NULL ORDER BY module_number ASC");
+                    $mStmt->execute([$viewId]);
+                    $viewCourseModules = $mStmt->fetchAll();
+
+                    $sStmt = $pdo->prepare("SELECT * FROM users WHERE faculty_id = ? AND role = 'student' ORDER BY id DESC");
+                    $sStmt->execute([$viewId]);
+                    $viewCourseStudents = $sStmt->fetchAll();
+
+                    $eStmt = $pdo->prepare("SELECT * FROM exams WHERE faculty_id = ?");
+                    $eStmt->execute([$viewId]);
+                    $viewCourseExams = $eStmt->fetchAll();
+                }
+            }
+
             $allExamAttempts = [];
             if ($page === 'exams_report') {
                 $allExamAttempts = $pdo->query("
@@ -243,6 +289,11 @@ class DashboardService
                 'view_payments' => $viewPayments,
                 'all_exam_attempts' => $allExamAttempts,
                 'all_certificates' => $allCertificates,
+                'courses_list' => $coursesList,
+                'view_course' => $viewCourse,
+                'view_course_modules' => $viewCourseModules,
+                'view_course_students' => $viewCourseStudents,
+                'view_course_exams' => $viewCourseExams,
             ];
         } catch (\PDOException $e) {
             error_log("Error fetching admin dashboard data: " . $e->getMessage());
@@ -597,12 +648,16 @@ class DashboardService
         $dob = trim($data['student_dob'] ?? '');
         $email = trim($data['student_email'] ?? '');
         $whatsappNumber = trim($data['student_whatsapp'] ?? '');
+        $streetAddress = trim($data['student_street_address'] ?? '');
+        $city = trim($data['student_city'] ?? '');
+        $country = trim($data['student_country'] ?? '');
+        $zipCode = trim($data['student_zip_code'] ?? '');
         $facultyId = intval($data['student_faculty'] ?? 0);
         $repCode = trim($data['student_rep'] ?? '');
         $status = trim($data['student_status'] ?? 'active');
 
-        if (empty($fullName) || empty($dob) || empty($email) || empty($whatsappNumber) || empty($facultyId)) {
-            throw new Exception('All required fields (Name, DOB, Email, WhatsApp, Faculty) must be filled.');
+        if (empty($fullName) || empty($dob) || empty($email) || empty($whatsappNumber) || empty($streetAddress) || empty($city) || empty($country) || empty($facultyId)) {
+            throw new Exception('All required fields (Name, DOB, Email, WhatsApp, Street Address, City, Country, Faculty) must be filled.');
         }
 
         // Check duplicate
@@ -619,8 +674,8 @@ class DashboardService
         try {
             $pdo->beginTransaction();
 
-            $stmt = $pdo->prepare("INSERT INTO users (full_name, dob, email, whatsapp_number, password_hash, role, faculty_id, rep_code, account_status) VALUES (?, ?, ?, ?, ?, 'student', ?, ?, ?)");
-            $stmt->execute([$fullName, $dob, $email, $whatsappNumber, $hash, $facultyId, $repCode ? $repCode : null, $status]);
+            $stmt = $pdo->prepare("INSERT INTO users (full_name, dob, email, whatsapp_number, street_address, city, country, zip_code, password_hash, role, faculty_id, rep_code, account_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'student', ?, ?, ?)");
+            $stmt->execute([$fullName, $dob, $email, $whatsappNumber, $streetAddress, $city, $country, $zipCode ? $zipCode : null, $hash, $facultyId, $repCode ? $repCode : null, $status]);
 
             $pdo->commit();
 
@@ -652,11 +707,15 @@ class DashboardService
         $dob = trim($data['student_dob'] ?? '');
         $email = trim($data['student_email'] ?? '');
         $whatsappNumber = trim($data['student_whatsapp'] ?? '');
+        $streetAddress = trim($data['student_street_address'] ?? '');
+        $city = trim($data['student_city'] ?? '');
+        $country = trim($data['student_country'] ?? '');
+        $zipCode = trim($data['student_zip_code'] ?? '');
         $facultyId = intval($data['student_faculty'] ?? 0);
         $repCode = trim($data['student_rep'] ?? '');
         $status = trim($data['student_status'] ?? 'active');
 
-        if (empty($fullName) || empty($dob) || empty($email) || empty($whatsappNumber) || empty($facultyId)) {
+        if (empty($fullName) || empty($dob) || empty($email) || empty($whatsappNumber) || empty($streetAddress) || empty($city) || empty($country) || empty($facultyId)) {
             throw new Exception('All required fields must be filled out to edit student.');
         }
 
@@ -683,8 +742,8 @@ class DashboardService
         }
 
         try {
-            $stmt = $pdo->prepare("UPDATE users SET full_name = ?, dob = ?, email = ?, whatsapp_number = ?, faculty_id = ?, rep_code = ?, account_status = ? WHERE id = ? AND role = 'student'");
-            $stmt->execute([$fullName, $dob, $email, $whatsappNumber, $facultyId, $repCode ? $repCode : null, $status, $studentId]);
+            $stmt = $pdo->prepare("UPDATE users SET full_name = ?, dob = ?, email = ?, whatsapp_number = ?, street_address = ?, city = ?, country = ?, zip_code = ?, faculty_id = ?, rep_code = ?, account_status = ? WHERE id = ? AND role = 'student'");
+            $stmt->execute([$fullName, $dob, $email, $whatsappNumber, $streetAddress, $city, $country, $zipCode ? $zipCode : null, $facultyId, $repCode ? $repCode : null, $status, $studentId]);
         } catch (\PDOException $e) {
             throw new Exception('Database error editing student: ' . $e->getMessage());
         }
@@ -960,6 +1019,75 @@ class DashboardService
             $stmt->execute([$hashed, $userId]);
         } catch (\PDOException $e) {
             throw new Exception('Error changing password: ' . $e->getMessage());
+        }
+    }
+    /**
+     * Add course (Faculty) (Admin operation).
+     *
+     * @param array $data
+     * @throws Exception
+     */
+    public function addCourse($data)
+    {
+        $pdo = DB::connection()->getPdo();
+        $name = trim($data['course_name'] ?? '');
+        $code = trim($data['course_code'] ?? '');
+        $duration = trim($data['course_duration'] ?? '');
+        $fee = floatval($data['course_fee'] ?? 0.00);
+        $description = trim($data['course_description'] ?? '');
+
+        if (empty($name)) {
+            throw new Exception("Course Name cannot be empty.");
+        }
+        try {
+            $stmt = $pdo->prepare("INSERT INTO faculties (name, code, duration, fee, description) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $code, $duration, $fee, $description]);
+        } catch (\PDOException $e) {
+            throw new Exception("Database error adding course: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Edit course (Faculty) (Admin operation).
+     *
+     * @param int $id
+     * @param array $data
+     * @throws Exception
+     */
+    public function editCourse($id, $data)
+    {
+        $pdo = DB::connection()->getPdo();
+        $name = trim($data['course_name'] ?? '');
+        $code = trim($data['course_code'] ?? '');
+        $duration = trim($data['course_duration'] ?? '');
+        $fee = floatval($data['course_fee'] ?? 0.00);
+        $description = trim($data['course_description'] ?? '');
+
+        if (empty($name)) {
+            throw new Exception("Course Name cannot be empty.");
+        }
+        try {
+            $stmt = $pdo->prepare("UPDATE faculties SET name = ?, code = ?, duration = ?, fee = ?, description = ? WHERE id = ?");
+            $stmt->execute([$name, $code, $duration, $fee, $description, $id]);
+        } catch (\PDOException $e) {
+            throw new Exception("Database error updating course: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete course (Faculty) (Admin operation).
+     *
+     * @param int $id
+     * @throws Exception
+     */
+    public function deleteCourse($id)
+    {
+        $pdo = DB::connection()->getPdo();
+        try {
+            $stmt = $pdo->prepare("DELETE FROM faculties WHERE id = ?");
+            $stmt->execute([$id]);
+        } catch (\PDOException $e) {
+            throw new Exception("Database error deleting course: " . $e->getMessage());
         }
     }
 }
