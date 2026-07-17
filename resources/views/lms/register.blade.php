@@ -376,6 +376,51 @@
                             </div>
                         </div>
 
+                        <!-- Permanent Residential Address section -->
+                        <h4 style="margin: 20px 0 10px 0; color: var(--text-heading); font-size:15px; border-bottom: 1.5px solid var(--border-main); padding-bottom: 5px;">Permanent Residential Address</h4>
+                        
+                        <div class="gov-form-group" style="margin-bottom: 14px !important;">
+                            <label class="gov-label" for="street_address">Street Address <span style="color:#d4351c;">*</span></label>
+                            <input class="gov-input" id="street_address" name="street_address" type="text" placeholder="Street name and house/apartment number" required value="{{ request()->input('street_address', '') }}">
+                            <span class="validation-error-msg" id="error_street_address"></span>
+                        </div>
+
+                        <div class="form-grid-row-3" style="margin-bottom: 14px !important;">
+                            <div class="gov-form-group">
+                                <label class="gov-label" for="city">City / Town <span style="color:#d4351c;">*</span></label>
+                                <input class="gov-input" id="city" name="city" type="text" placeholder="e.g. London" required value="{{ request()->input('city', '') }}">
+                                <span class="validation-error-msg" id="error_city"></span>
+                            </div>
+                            <div class="gov-form-group">
+                                <label class="gov-label" for="country">Country <span style="color:#d4351c;">*</span></label>
+                                <select class="gov-select" id="country" name="country" required style="padding-top:8px; padding-bottom:8px;">
+                                    <option value="">-- Choose Country --</option>
+                                    <option value="United Kingdom" {{ request()->input('country') == 'United Kingdom' ? 'selected' : '' }}>🇬🇧 United Kingdom</option>
+                                    <option value="United States" {{ request()->input('country') == 'United States' ? 'selected' : '' }}>🇺🇸 United States</option>
+                                    <option value="Canada" {{ request()->input('country') == 'Canada' ? 'selected' : '' }}>🇨🇦 Canada</option>
+                                    <option value="Australia" {{ request()->input('country') == 'Australia' ? 'selected' : '' }}>🇦🇺 Australia</option>
+                                    <option value="Pakistan" {{ request()->input('country') == 'Pakistan' ? 'selected' : '' }}>🇵🇰 Pakistan</option>
+                                    <option value="India" {{ request()->input('country') == 'India' ? 'selected' : '' }}>🇮🇳 India</option>
+                                    <option value="United Arab Emirates" {{ request()->input('country') == 'United Arab Emirates' ? 'selected' : '' }}>🇦🇪 United Arab Emirates</option>
+                                    <option value="Saudi Arabia" {{ request()->input('country') == 'Saudi Arabia' ? 'selected' : '' }}>🇸🇦 Saudi Arabia</option>
+                                    <option value="Germany" {{ request()->input('country') == 'Germany' ? 'selected' : '' }}>🇩🇪 Germany</option>
+                                    <option value="France" {{ request()->input('country') == 'France' ? 'selected' : '' }}>🇫🇷 France</option>
+                                    <option value="South Africa" {{ request()->input('country') == 'South Africa' ? 'selected' : '' }}>🇿🇦 South Africa</option>
+                                    <option value="Nigeria" {{ request()->input('country') == 'Nigeria' ? 'selected' : '' }}>🇳🇬 Nigeria</option>
+                                    <option value="Ireland" {{ request()->input('country') == 'Ireland' ? 'selected' : '' }}>🇮🇪 Ireland</option>
+                                    <option value="New Zealand" {{ request()->input('country') == 'New Zealand' ? 'selected' : '' }}>🇳🇿 New Zealand</option>
+                                    <option value="Singapore" {{ request()->input('country') == 'Singapore' ? 'selected' : '' }}>🇸🇬 Singapore</option>
+                                    <option value="Malaysia" {{ request()->input('country') == 'Malaysia' ? 'selected' : '' }}>🇲🇾 Malaysia</option>
+                                </select>
+                                <span class="validation-error-msg" id="error_country"></span>
+                            </div>
+                            <div class="gov-form-group">
+                                <label class="gov-label" for="zip_code">Zip Code / Postcode <span style="color:#999;font-weight:400;">(optional)</span></label>
+                                <input class="gov-input" id="zip_code" name="zip_code" type="text" placeholder="e.g. SW1A 1AA" value="{{ request()->input('zip_code', '') }}">
+                                <span class="validation-error-msg" id="error_zip_code"></span>
+                            </div>
+                        </div>
+
                         <div class="form-grid-row-3">
                             <div class="gov-form-group">
                                 <label class="gov-label" for="prior_learning_level">Prior Learning Level <span style="color:#d4351c;">*</span></label>
@@ -610,8 +655,23 @@
         var whatsapp = document.getElementById('whatsapp_number').value.trim();
         var faculty = document.getElementById('faculty_id').value;
         var priorLevel = document.getElementById('prior_learning_level').value;
+        var street = document.getElementById('street_address').value.trim();
+        var city = document.getElementById('city').value.trim();
+        var country = document.getElementById('country').value;
         var hasError = false;
 
+        if (!street) {
+            showFieldError('street_address', 'Street Address is required.');
+            hasError = true;
+        }
+        if (!city) {
+            showFieldError('city', 'City is required.');
+            hasError = true;
+        }
+        if (!country) {
+            showFieldError('country', 'Country selection is required.');
+            hasError = true;
+        }
         if (!name) {
             showFieldError('full_name', 'Full Name is required.');
             hasError = true;
@@ -778,9 +838,24 @@
         var whatsapp = document.getElementById('whatsapp_number').value.trim();
         var faculty = document.getElementById('faculty_id').value;
         var priorLevel = document.getElementById('prior_learning_level').value;
+        var street = document.getElementById('street_address').value.trim();
+        var city = document.getElementById('city').value.trim();
+        var country = document.getElementById('country').value;
         var payment = document.getElementById('payment_choice').value;
         var hasStep1Error = false;
 
+        if (!street) {
+            showFieldError('street_address', 'Street Address is required.');
+            hasStep1Error = true;
+        }
+        if (!city) {
+            showFieldError('city', 'City is required.');
+            hasStep1Error = true;
+        }
+        if (!country) {
+            showFieldError('country', 'Country selection is required.');
+            hasStep1Error = true;
+        }
         if (!name) {
             showFieldError('full_name', 'Full Name is required.');
             hasStep1Error = true;

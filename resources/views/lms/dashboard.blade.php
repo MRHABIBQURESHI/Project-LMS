@@ -251,6 +251,12 @@
                             <span class="nav-text">Students Registry</span>
                         </a>
                     </li>
+                    <li class="db-nav-item {{ $page === 'courses' ? 'active' : '' }}">
+                        <a href="{{ route('lms.dashboard', ['page' => 'courses']) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            <span class="nav-text">Manage Courses</span>
+                        </a>
+                    </li>
                     <li class="db-nav-item {{ $page === 'exams_report' ? 'active' : '' }}">
                         <a href="{{ route('lms.dashboard', ['page' => 'exams_report']) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -264,6 +270,14 @@
                         </a>
                     </li>
                 @endif
+                
+                <li class="db-nav-section-title">Regulations</li>
+                <li class="db-nav-item {{ $page === 'dispute' ? 'active' : '' }}">
+                    <a href="{{ route('lms.dashboard', ['page' => 'dispute']) }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        <span class="nav-text">Complaints & Dispute</span>
+                    </a>
+                </li>
                 
                 <li class="db-nav-section-title">Account</li>
                 <li class="db-nav-item">
@@ -1049,8 +1063,8 @@
                                     <a href="{{ route('lms.dashboard', ['page' => 'students']) }}" class="gov-button gov-button-secondary" style="padding: 8px 16px; font-size:14px; border-radius:4px; text-decoration:none; text-align:center; display:block;">&larr; Back to Students List</a>
                                 </div>
                                 
-                                <div style="background-color: #fafbfe; padding: 25px; border: 1.5px solid #EBF3FC; border-radius: 8px; margin-bottom: 30px;">
-                                    <h3 style="color:#002F6C; margin-bottom:15px; font-size:16px; border-bottom:1px solid #EBF3FC; padding-bottom:5px;">Personal & Account Info</h3>
+                                <div style="background-color: var(--bg-secondary); padding: 25px; border: 1.5px solid var(--border-main); border-radius: 8px; margin-bottom: 30px;">
+                                    <h3 style="color: var(--text-heading); margin-bottom:15px; font-size:16px; border-bottom:1.5px solid var(--border-main); padding-bottom:5px;">Personal & Account Info</h3>
                                     <div class="gov-grid-row">
                                         <div class="gov-grid-column-one-third">
                                             <p style="margin-bottom:8px; font-size:14px;"><strong>Student Name:</strong> {{ $view_student['full_name'] }}</p>
@@ -1071,6 +1085,12 @@
                                             <p style="margin-bottom:8px; font-size:14px;"><strong>Representative Code:</strong> <code>{{ $view_student['rep_code'] ?: 'None' }}</code></p>
                                             <p style="margin-bottom:0; font-size:14px;"><strong>Created On:</strong> {{ $view_student['created_at'] }}</p>
                                         </div>
+                                    </div>
+                                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1.5px solid var(--border-main); display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px;">
+                                        <p style="margin-bottom:0; font-size:14px; grid-column: span 3; color: var(--text-primary);"><strong>Street Address:</strong> {{ $view_student['street_address'] }}</p>
+                                        <p style="margin-bottom:0; font-size:14px; color: var(--text-primary);"><strong>City / Town:</strong> {{ $view_student['city'] }}</p>
+                                        <p style="margin-bottom:0; font-size:14px; color: var(--text-primary);"><strong>Country:</strong> {{ $view_student['country'] }}</p>
+                                        <p style="margin-bottom:0; font-size:14px; color: var(--text-primary);"><strong>Zip / Postcode:</strong> {{ $view_student['zip_code'] ?: 'None' }}</p>
                                     </div>
                                 </div>
 
@@ -1275,7 +1295,7 @@
                                 </div>
 
                                 <!-- SEARCH & FILTER FORM -->
-                                <form action="{{ route('lms.dashboard') }}" method="GET" style="display:flex; flex-wrap:wrap; gap:15px; background-color:#fafbfe; padding:20px; border:1.5px solid #EBF3FC; border-radius:8px; margin-bottom:25px; align-items:flex-end;">
+                                <form action="{{ route('lms.dashboard') }}" method="GET" style="display:flex; flex-wrap:wrap; gap:15px; background-color: var(--bg-secondary); padding:20px; border:1.5px solid var(--border-main); border-radius:8px; margin-bottom:25px; align-items:flex-end;">
                                     <input type="hidden" name="page" value="students">
                                     
                                     <div style="flex: 1; min-width: 200px;">
@@ -1301,51 +1321,53 @@
                                     </div>
                                 </form>
 
-                                <table class="gov-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Student ID</th>
-                                            <th>Full Name</th>
-                                            <th>Registered Email</th>
-                                            <th>WhatsApp</th>
-                                            <th>Faculty Program</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @if (empty($students_list))
+                                <div class="premium-table-wrapper">
+                                    <table class="gov-table" style="margin-bottom: 0;">
+                                        <thead>
                                             <tr>
-                                                <td colspan="7" class="gov-hint" style="text-align:center;">No students registered in the database.</td>
+                                                <th>Student ID</th>
+                                                <th>Full Name</th>
+                                                <th>Registered Email</th>
+                                                <th>WhatsApp</th>
+                                                <th>Faculty Program</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
                                             </tr>
-                                        @else
-                                            @foreach ($students_list as $st)
+                                        </thead>
+                                        <tbody>
+                                            @if (empty($students_list))
                                                 <tr>
-                                                    <td><strong>LIAB-ST-{{ $st['id'] }}</strong></td>
-                                                    <td>{{ $st['full_name'] }}</td>
-                                                    <td>{{ $st['email'] }}</td>
-                                                    <td>{{ $st['whatsapp_number'] }}</td>
-                                                    <td>{{ $st['faculty_name'] ?: 'Not Enrolled' }}</td>
-                                                    <td>
-                                                        <span class="gov-tag {{ $st['account_status'] === 'active' ? 'gov-tag-green' : ($st['account_status'] === 'locked' ? 'gov-tag-grey' : 'gov-tag-yellow') }}" style="font-size:11px; padding:3px 8px; text-transform:none;">
-                                                            {{ $st['account_status'] }}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <a href="{{ route('lms.dashboard', ['page' => 'students', 'view_id' => $st['id']]) }}" class="btn-action btn-view">View</a>
-                                                        <button onclick="showEditModal({{ json_encode($st) }})" class="btn-action btn-edit" style="cursor:pointer; border:none; outline:none; background:none;">Edit</button>
-                                                        <form action="{{ route('lms.dashboard') }}?page=students" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this student profile? All associated coursework, payments, and certificates will be deleted.')">
-                                                            @csrf
-                                                            <input type="hidden" name="delete_student" value="1">
-                                                            <input type="hidden" name="delete_id" value="{{ $st['id'] }}">
-                                                            <button type="submit" class="btn-action btn-delete" style="cursor:pointer; border:none; outline:none; background:none;">Delete</button>
-                                                        </form>
-                                                    </td>
+                                                    <td colspan="7" class="gov-hint" style="text-align:center;">No students registered in the database.</td>
                                                 </tr>
-                                            @endforeach
-                                        @endif
-                                    </tbody>
-                                </table>
+                                            @else
+                                                @foreach ($students_list as $st)
+                                                    <tr>
+                                                        <td><strong>LIAB-ST-{{ $st['id'] }}</strong></td>
+                                                        <td>{{ $st['full_name'] }}</td>
+                                                        <td>{{ $st['email'] }}</td>
+                                                        <td>{{ $st['whatsapp_number'] }}</td>
+                                                        <td>{{ $st['faculty_name'] ?: 'Not Enrolled' }}</td>
+                                                        <td>
+                                                            <span class="gov-tag {{ $st['account_status'] === 'active' ? 'gov-tag-green' : ($st['account_status'] === 'locked' ? 'gov-tag-grey' : 'gov-tag-yellow') }}" style="font-size:11px; padding:3px 8px; text-transform:none;">
+                                                                {{ $st['account_status'] }}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <a href="{{ route('lms.dashboard', ['page' => 'students', 'view_id' => $st['id']]) }}" class="btn-action btn-view">View</a>
+                                                            <button onclick="showEditModal({{ json_encode($st) }})" class="btn-action btn-edit" style="cursor:pointer; border:none; outline:none; background:none;">Edit</button>
+                                                            <form action="{{ route('lms.dashboard') }}?page=students" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this student profile? All associated coursework, payments, and certificates will be deleted.')">
+                                                                @csrf
+                                                                <input type="hidden" name="delete_student" value="1">
+                                                                <input type="hidden" name="delete_id" value="{{ $st['id'] }}">
+                                                                <button type="submit" class="btn-action btn-delete" style="cursor:pointer; border:none; outline:none; background:none;">Delete</button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            @endif
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         @endif
 
@@ -1395,6 +1417,196 @@
                                 </tbody>
                             </table>
                         </div>
+
+                    <!-- ====================================================================== -->
+                    <!-- TAB PAGE: MANAGE COURSES -->
+                    <!-- ====================================================================== -->
+                    @elseif ($page === 'courses')
+                        @if ($view_course)
+                            <!-- Course Profile Details View Card -->
+                            <div class="db-card">
+                                <div class="db-card-header">
+                                    <h2>Course Program Review</h2>
+                                    <a href="{{ route('lms.dashboard', ['page' => 'courses']) }}" class="gov-button gov-button-secondary" style="padding: 8px 16px; font-size:14px; border-radius:4px; text-decoration:none; text-align:center; display:block;">&larr; Back to Courses List</a>
+                                </div>
+                                
+                                <div style="background-color: var(--bg-secondary); padding: 25px; border: 1.5px solid var(--border-main); border-radius: 8px; margin-bottom: 30px;">
+                                    <h3 style="color: var(--text-heading); margin-bottom:15px; font-size:16px; border-bottom:1.5px solid var(--border-main); padding-bottom:5px;">Course Track Overview</h3>
+                                    <div class="gov-grid-row">
+                                        <div class="gov-grid-column-one-half">
+                                            <p style="margin-bottom:8px; font-size:14px; color: var(--text-primary);"><strong>Course Name:</strong> Faculty of {{ $view_course['name'] }}</p>
+                                            <p style="margin-bottom:8px; font-size:14px; color: var(--text-primary);"><strong>Course Code:</strong> <code>{{ $view_course['code'] ?: 'N/A' }}</code></p>
+                                            <p style="margin-bottom:8px; font-size:14px; color: var(--text-primary);"><strong>Course ID Reference:</strong> LIAB-CR-{{ $view_course['id'] }}</p>
+                                            <p style="margin-bottom:0; font-size:14px; color: var(--text-primary);"><strong>Course Description:</strong> {{ $view_course['description'] ?: 'No description provided.' }}</p>
+                                        </div>
+                                        <div class="gov-grid-column-one-half" style="text-align: right;">
+                                            <p style="margin-bottom:8px; font-size:14px; color: var(--text-primary);"><strong>Track Duration:</strong> {{ $view_course['duration'] ?: 'N/A' }}</p>
+                                            <p style="margin-bottom:8px; font-size:14px; color: var(--text-primary);"><strong>Tuition Fee:</strong> £{{ number_format($view_course['fee'] ?? 0.00, 2) }}</p>
+                                            <p style="margin-bottom:8px; font-size:14px; color: var(--text-primary);"><strong>Total Associated Modules:</strong> {{ count($view_course_modules) }} Modules</p>
+                                            <p style="margin-bottom:0; font-size:14px; color: var(--text-primary);"><strong>Enrolled Active Students:</strong> {{ count($view_course_students) }} Students</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="gov-grid-row">
+                                    <!-- Left Column: Academic Modules -->
+                                    <div class="gov-grid-column-two-thirds">
+                                        <h3 style="color: var(--text-heading); margin-bottom:15px; font-size:16px;">Curriculum & Academic Modules</h3>
+                                        <table class="gov-table" style="margin-bottom: 30px;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Module No.</th>
+                                                    <th>Phase</th>
+                                                    <th>Title</th>
+                                                    <th>Content Type</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if (empty($view_course_modules))
+                                                    <tr>
+                                                        <td colspan="4" class="gov-hint" style="text-align:center;">No modules assigned to this course track.</td>
+                                                    </tr>
+                                                @else
+                                                    @foreach ($view_course_modules as $mod)
+                                                        <tr>
+                                                            <td><strong>Module {{ $mod['module_number'] }}</strong></td>
+                                                            <td><span class="gov-tag gov-tag-grey" style="font-size:10px; padding:2px 6px;">Phase {{ $mod['phase'] }}</span></td>
+                                                            <td>
+                                                                {{ $mod['title'] }}
+                                                                @if ($mod['faculty_id'] === null)
+                                                                    <span style="font-size: 10px; color: var(--text-hint); font-style: italic; display:block;">(Core Universal Module)</span>
+                                                                @endif
+                                                            </td>
+                                                            <td><span style="text-transform: capitalize;">{{ $mod['content_type'] }}</span></td>
+                                                        </tr>
+                                                    @endforeach
+                                                @endif
+                                            </tbody>
+                                        </table>
+
+                                        <h3 style="color: var(--text-heading); margin-bottom:15px; font-size:16px;">Course Timed Exams Configuration</h3>
+                                        <table class="gov-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Exam ID</th>
+                                                    <th>Duration</th>
+                                                    <th>Pass Threshold</th>
+                                                    <th>Total Questions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if (empty($view_course_exams))
+                                                    <tr>
+                                                        <td colspan="4" class="gov-hint" style="text-align:center;">No timed exam configured for this course.</td>
+                                                    </tr>
+                                                @else
+                                                    @foreach ($view_course_exams as $ex)
+                                                        <tr>
+                                                            <td><strong>#{{ $ex['id'] }}</strong></td>
+                                                            <td>{{ $ex['duration_minutes'] }} Minutes</td>
+                                                            <td>{{ $ex['pass_threshold'] }}% Correct Answer Grade</td>
+                                                            <td>{{ $ex['total_questions'] }} Questions</td>
+                                                        </tr>
+                                                    @endforeach
+                                                @endif
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Right Column: Enrolled Students -->
+                                    <div class="gov-grid-column-one-third">
+                                        <h3 style="color: var(--text-heading); margin-bottom:15px; font-size:16px;">Enrolled Student Profiles</h3>
+                                        <div style="background-color: var(--bg-secondary); padding: 15px; border: 1.5px solid var(--border-main); border-radius: 8px;">
+                                            @if (empty($view_course_students))
+                                                <span class="gov-hint">No students currently enrolled in this track.</span>
+                                            @else
+                                                @foreach ($view_course_students as $st)
+                                                    <div style="font-size:13px; margin-bottom: 12px; border-bottom: 1px solid var(--border-main); padding-bottom:10px; line-height: 1.45;">
+                                                        <strong>{{ $st['full_name'] }}</strong><br>
+                                                        Email: <span style="color: var(--text-secondary);">{{ $st['email'] }}</span><br>
+                                                        WhatsApp: <span style="color: var(--text-secondary);">{{ $st['whatsapp_number'] }}</span><br>
+                                                        Status: <span class="gov-tag {{ $st['account_status'] === 'active' ? 'gov-tag-green' : ($st['account_status'] === 'locked' ? 'gov-tag-grey' : 'gov-tag-yellow') }}" style="font-size:9px; padding:1px 4px; text-transform:none;">{{ $st['account_status'] }}</span>
+                                                        <a href="{{ route('lms.dashboard', ['page' => 'students', 'view_id' => $st['id']]) }}" class="gov-button" style="display:block; width:100%; text-align:center; padding: 6px; font-size:10px; margin-top:8px; border-radius:4px; text-decoration:none; text-align:center;">View Student Profile</a>
+                                                    </div>
+                                                @endforeach
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <!-- Courses Directory Table Card -->
+                            <div class="db-card">
+                                <div class="db-card-header">
+                                    <h2>Manage Program Courses</h2>
+                                    <button class="gov-button" onclick="showAddCourseModal()" style="border-radius:6px; padding: 8px 16px; font-size:14px;">+ Add New Course</button>
+                                </div>
+
+                                <!-- COURSE SEARCH FILTERS -->
+                                <form action="{{ route('lms.dashboard') }}" method="GET" style="display:flex; flex-wrap:wrap; gap:15px; background-color: var(--bg-secondary); padding:20px; border:1.5px solid var(--border-main); border-radius:8px; margin-bottom:25px; align-items:flex-end;">
+                                    <input type="hidden" name="page" value="courses">
+                                    
+                                    <div style="flex: 1; min-width: 200px;">
+                                        <label class="gov-label" for="course_search" style="font-size:13px; margin-bottom:4px;">Search Course by Name</label>
+                                        <input class="gov-input" id="course_search" name="search" type="text" value="{{ $search }}" placeholder="Type course name..." style="max-width:100%; height:40px; font-size:13px;">
+                                    </div>
+
+                                    <div style="display:flex; gap:10px;">
+                                        <button type="submit" class="gov-button" style="padding: 10px 20px; font-size:13px; height:40px; border-radius:4px;">Filter</button>
+                                        @if (!empty($search))
+                                            <a href="{{ route('lms.dashboard', ['page' => 'courses']) }}" class="gov-button gov-button-secondary" style="padding: 10px 20px; font-size:13px; height:40px; border-radius:4px; text-decoration:none; display:flex; align-items:center; justify-content:center;">Clear</a>
+                                        @endif
+                                    </div>
+                                </form>
+                                
+                                <div class="premium-table-wrapper">
+                                    <table class="gov-table" style="margin-bottom: 0;">
+                                        <thead>
+                                            <tr>
+                                                <th>Course ID</th>
+                                                <th>Academic Program Focus</th>
+                                                <th>Code</th>
+                                                <th>Duration</th>
+                                                <th>Tuition Fee</th>
+                                                <th>Modules</th>
+                                                <th>Students</th>
+                                                <th style="text-align:right;">Registry Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (empty($courses_list))
+                                                <tr>
+                                                    <td colspan="8" class="gov-hint" style="text-align:center;">No courses matched your query.</td>
+                                                </tr>
+                                            @else
+                                                @foreach ($courses_list as $c)
+                                                    <tr>
+                                                        <td><strong>#{{ $c['id'] }}</strong></td>
+                                                        <td>Faculty of {{ $c['name'] }}</td>
+                                                        <td><code>{{ $c['code'] ?: 'N/A' }}</code></td>
+                                                        <td>{{ $c['duration'] ?: 'N/A' }}</td>
+                                                        <td>£{{ number_format($c['fee'] ?? 0.00, 2) }}</td>
+                                                        <td><span class="gov-tag gov-tag-grey" style="font-size:11px; padding:2px 6px;">{{ $c['modules_count'] ?? 0 }} Modules</span></td>
+                                                        <td><span class="gov-tag gov-tag-blue" style="font-size:11px; padding:2px 6px;">{{ $c['students_count'] ?? 0 }} Students</span></td>
+                                                        <td style="text-align:right; white-space: nowrap;">
+                                                            <a href="{{ route('lms.dashboard', ['page' => 'courses', 'view_id' => $c['id']]) }}" class="btn-action btn-view" style="cursor:pointer; border:none; outline:none; text-decoration:none; font-weight:600; font-size:12px; margin-right: 6px; display:inline-block;">View</a>
+                                                            <button onclick='showEditCourseModal(@json($c))' class="btn-action btn-edit" style="cursor:pointer; border:none; outline:none; background:none; margin-right: 6px;">Edit</button>
+                                                            
+                                                            <form action="{{ route('lms.dashboard') }}?page=courses" method="POST" style="display:inline;" onsubmit="return confirm('Warning: Deleting this course will also delete all modules, exams, and student assignments associated with it. Are you sure you want to proceed?');">
+                                                                @csrf
+                                                                <input type="hidden" name="delete_course" value="1">
+                                                                <input type="hidden" name="delete_id" value="{{ $c['id'] }}">
+                                                                <button type="submit" class="btn-action btn-delete" style="cursor:pointer; border:none; outline:none; background:none; padding:0;">Delete</button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            @endif
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
 
                     <!-- ====================================================================== -->
                     <!-- TAB PAGE D: CERTIFICATE LEDGER REGISTRY -->
@@ -1542,6 +1754,36 @@
                     </div>
                 @endif
 
+                <!-- ====================================================================== -->
+                <!-- UNIVERSAL TAB PAGE: COMPLAINTS & DISPUTE RESOLUTION -->
+                <!-- ====================================================================== -->
+                @if ($page === 'dispute')
+                    <div class="db-card" style="max-width: 900px; margin: 0 auto 30px auto; padding: 30px;">
+                        <div class="db-card-header" style="border-bottom: 2px solid var(--border-main); padding-bottom: 15px; margin-bottom: 25px;">
+                            <h2 style="color: var(--text-heading); margin: 0; font-size: 22px; font-weight: 700;">Complaints & Dispute Resolution</h2>
+                            <p class="gov-hint" style="margin: 5px 0 0 0;">Official Grievances & Arbitration Regulations</p>
+                        </div>
+
+                        <div style="line-height: 1.7; color: var(--text-primary); font-size: 14.5px;">
+                            <h3 style="color: var(--text-heading); font-size: 16px; margin-top: 25px; margin-bottom: 10px; font-weight: 600;">1. Lodging an Official Institutional Grievance</h3>
+                            <p style="margin-bottom: 15px;">Candidates wishing to lodge a formal complaint regarding evaluation metrics, syllabus access tracking logs, or administrative processing paths must submit a signed case portfolio file directly to the compliance panel via email at <a href="mailto:compliance@cpduk.london" style="color: #002F6C; text-decoration: underline;">compliance@cpduk.london</a>.</p>
+                            <p style="margin-bottom: 25px; background-color: var(--bg-secondary); padding: 12px 16px; border-left: 4px solid var(--border-main); border-radius: 4px;">Anonymous reports, informal live-chat complaints, or messages sent via external channels will not enter the registry tracking archives.</p>
+
+                            <h3 style="color: var(--text-heading); font-size: 16px; margin-top: 25px; margin-bottom: 10px; font-weight: 600;">2. Evaluation Appeals & Verification Timelines</h3>
+                            <p style="margin-bottom: 15px;">If a student disputes a final transcript mark landing below our strict 50% database-wide passing threshold, they have exactly 7 calendar days from the conclusion of the 14-day hold review state to request an independent script-verification audit.</p>
+                            <p style="margin-bottom: 25px;">Grievances regarding portfolio markings require a flat administrative reinvestigation processing fee of £99.00 GBP, securely cleared via our card gateway before the Academic Assessment Committee re-evaluates the script logs.</p>
+
+                            <h3 style="color: var(--text-heading); font-size: 16px; margin-top: 25px; margin-bottom: 10px; font-weight: 600;">3. Finality of Financial Covenants & Refund Terms</h3>
+                            <p style="margin-bottom: 15px;">The Complaints Department strictly enforces Section 4.3 of our institutional student handbook rules. All onboarding fees, course installment tokens, and exam resit entry costs remain 100% non-refundable and non-transferable under all operational circumstances, without exception.</p>
+                            <p style="margin-bottom: 25px; background-color: var(--bg-secondary); padding: 12px 16px; border-left: 4px solid var(--border-main); border-radius: 4px;">Filing a grievance or open complaint log does not pause, suspend, or change ongoing monthly installment liabilities or system accounting collection cycles.</p>
+
+                            <h3 style="color: var(--text-heading); font-size: 16px; margin-top: 25px; margin-bottom: 10px; font-weight: 600;">4. Arbitration Boundaries & Jurisdiction Laws</h3>
+                            <p style="margin-bottom: 15px;">The International Certification Award Board operates entirely as an independent international registry separate from standard state regulatory bodies.</p>
+                            <p style="margin-bottom: 0;">All formal dispute resolution, contract execution rules, and legal liabilities are subject to the exclusive jurisdiction of the courts of London, United Kingdom.</p>
+                        </div>
+                    </div>
+                @endif
+
             </div>
         </div>
     </div>
@@ -1600,6 +1842,52 @@
                     <div class="gov-form-group">
                         <label class="gov-label" for="c_rep">Representative Code</label>
                         <input class="gov-input" id="c_rep" name="student_rep" type="text" placeholder="e.g. REP-CODE">
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <h4 style="margin: 10px 0 5px 0; color: var(--text-heading); font-size:14px; border-bottom:1.5px solid var(--border-main); padding-bottom:3px;">Permanent Residential Address</h4>
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="c_street_address">Street Address <span style="color:#d4351c;">*</span></label>
+                        <input class="gov-input" id="c_street_address" name="student_street_address" type="text" required placeholder="Street name and house/apartment number">
+                        <span class="validation-error-msg" id="error_c_street_address"></span>
+                    </div>
+
+                    <div class="gov-form-group">
+                        <label class="gov-label" for="c_city">City / Town <span style="color:#d4351c;">*</span></label>
+                        <input class="gov-input" id="c_city" name="student_city" type="text" required placeholder="e.g. London">
+                        <span class="validation-error-msg" id="error_c_city"></span>
+                    </div>
+
+                    <div class="gov-form-group">
+                        <label class="gov-label" for="c_country">Country <span style="color:#d4351c;">*</span></label>
+                        <select class="gov-select" id="c_country" name="student_country" required style="padding-top:8px; padding-bottom:8px;">
+                            <option value="">-- Choose Country --</option>
+                            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                            <option value="United States">🇺🇸 United States</option>
+                            <option value="Canada">🇨🇦 Canada</option>
+                            <option value="Australia">🇦🇺 Australia</option>
+                            <option value="Pakistan">🇵🇰 Pakistan</option>
+                            <option value="India">🇮🇳 India</option>
+                            <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                            <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                            <option value="Germany">🇩🇪 Germany</option>
+                            <option value="France">🇫🇷 France</option>
+                            <option value="South Africa">🇿🇦 South Africa</option>
+                            <option value="Nigeria">🇳🇬 Nigeria</option>
+                            <option value="Ireland">🇮🇪 Ireland</option>
+                            <option value="New Zealand">🇳🇿 New Zealand</option>
+                            <option value="Singapore">🇸🇬 Singapore</option>
+                            <option value="Malaysia">🇲🇾 Malaysia</option>
+                        </select>
+                        <span class="validation-error-msg" id="error_c_country"></span>
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="c_zip_code">Zip Code / Postcode <span style="color:#999;font-weight:400;">(optional)</span></label>
+                        <input class="gov-input" id="c_zip_code" name="student_zip_code" type="text" placeholder="e.g. SW1A 1AA">
+                        <span class="validation-error-msg" id="error_c_zip_code"></span>
                     </div>
 
                     <div class="gov-form-group">
@@ -1673,6 +1961,52 @@
                         <input class="gov-input" id="e_rep" name="student_rep" type="text">
                     </div>
 
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <h4 style="margin: 10px 0 5px 0; color: var(--text-heading); font-size:14px; border-bottom:1.5px solid var(--border-main); padding-bottom:3px;">Permanent Residential Address</h4>
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="e_street_address">Street Address <span style="color:#d4351c;">*</span></label>
+                        <input class="gov-input" id="e_street_address" name="student_street_address" type="text" required>
+                        <span class="validation-error-msg" id="error_e_street_address"></span>
+                    </div>
+
+                    <div class="gov-form-group">
+                        <label class="gov-label" for="e_city">City / Town <span style="color:#d4351c;">*</span></label>
+                        <input class="gov-input" id="e_city" name="student_city" type="text" required>
+                        <span class="validation-error-msg" id="error_e_city"></span>
+                    </div>
+
+                    <div class="gov-form-group">
+                        <label class="gov-label" for="e_country">Country <span style="color:#d4351c;">*</span></label>
+                        <select class="gov-select" id="e_country" name="student_country" required style="padding-top:8px; padding-bottom:8px;">
+                            <option value="">-- Choose Country --</option>
+                            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                            <option value="United States">🇺🇸 United States</option>
+                            <option value="Canada">🇨🇦 Canada</option>
+                            <option value="Australia">🇦🇺 Australia</option>
+                            <option value="Pakistan">🇵🇰 Pakistan</option>
+                            <option value="India">🇮🇳 India</option>
+                            <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                            <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                            <option value="Germany">🇩🇪 Germany</option>
+                            <option value="France">🇫🇷 France</option>
+                            <option value="South Africa">🇿🇦 South Africa</option>
+                            <option value="Nigeria">🇳🇬 Nigeria</option>
+                            <option value="Ireland">🇮🇪 Ireland</option>
+                            <option value="New Zealand">🇳🇿 New Zealand</option>
+                            <option value="Singapore">🇸🇬 Singapore</option>
+                            <option value="Malaysia">🇲🇾 Malaysia</option>
+                        </select>
+                        <span class="validation-error-msg" id="error_e_country"></span>
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="e_zip_code">Zip Code / Postcode <span style="color:#999;font-weight:400;">(optional)</span></label>
+                        <input class="gov-input" id="e_zip_code" name="student_zip_code" type="text">
+                        <span class="validation-error-msg" id="error_e_zip_code"></span>
+                    </div>
+
                     <div class="gov-form-group">
                         <label class="gov-label" for="e_status">Account Status</label>
                         <select class="gov-select" id="e_status" name="student_status" required>
@@ -1685,6 +2019,105 @@
 
                 <div class="modal-form-actions">
                     <button type="button" class="gov-button gov-button-secondary" onclick="hideEditModal()" style="border-radius:6px; padding: 10px 20px;">Cancel</button>
+                    <button type="submit" class="gov-button" style="border-radius:6px; padding: 10px 24px;">Save Updates</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- ADD COURSE MODAL POPUP -->
+    <!-- ====================================================================== -->
+    <div id="addCourseModal" class="db-modal-overlay" style="display: none;">
+        <div class="db-modal" style="max-width: 600px;">
+            <span class="db-modal-close" onclick="hideAddCourseModal()">&times;</span>
+            <h3 style="margin-bottom: 25px; font-size:18px; color: var(--text-heading);">Add Academic Course</h3>
+            
+            <form action="{{ route('lms.dashboard') }}?page=courses" method="POST" novalidate onsubmit="return validateAddCourse()">
+                @csrf
+                <input type="hidden" name="add_course" value="1">
+                
+                <div class="modal-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="add_course_name">Course / Faculty Name</label>
+                        <input class="gov-input" id="add_course_name" name="course_name" type="text" required placeholder="e.g. Nursing, Midwifery & Health Sciences" style="width:100%;">
+                        <span class="validation-error-msg" id="error_add_course_name"></span>
+                    </div>
+
+                    <div class="gov-form-group">
+                        <label class="gov-label" for="add_course_code">Course Code</label>
+                        <input class="gov-input" id="add_course_code" name="course_code" type="text" placeholder="e.g. NUR-101" style="width:100%;">
+                    </div>
+
+                    <div class="gov-form-group">
+                        <label class="gov-label" for="add_course_duration">Duration</label>
+                        <input class="gov-input" id="add_course_duration" name="course_duration" type="text" placeholder="e.g. 1 Year / 6 Months" style="width:100%;">
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="add_course_fee">Tuition Fee (£)</label>
+                        <input class="gov-input" id="add_course_fee" name="course_fee" type="number" step="0.01" placeholder="e.g. 2249.00" style="width:100%;">
+                        <span class="validation-error-msg" id="error_add_course_fee"></span>
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="add_course_description">Course Description</label>
+                        <textarea class="gov-input" id="add_course_description" name="course_description" rows="3" placeholder="Provide course summary..." style="width:100%; height: auto; min-height: 80px; resize: vertical; padding: 10px; font-family: inherit;"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-form-actions" style="margin-top: 25px;">
+                    <button type="button" class="gov-button gov-button-secondary" onclick="hideAddCourseModal()" style="border-radius:6px; padding: 10px 20px;">Cancel</button>
+                    <button type="submit" class="gov-button" style="border-radius:6px; padding: 10px 24px;">Add Course</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- EDIT COURSE MODAL POPUP -->
+    <!-- ====================================================================== -->
+    <div id="editCourseModal" class="db-modal-overlay" style="display: none;">
+        <div class="db-modal" style="max-width: 600px;">
+            <span class="db-modal-close" onclick="hideEditCourseModal()">&times;</span>
+            <h3 style="margin-bottom: 25px; font-size:18px; color: var(--text-heading);">Edit Academic Course</h3>
+            
+            <form action="{{ route('lms.dashboard') }}?page=courses" method="POST" novalidate onsubmit="return validateEditCourse()">
+                @csrf
+                <input type="hidden" name="edit_course" value="1">
+                <input type="hidden" id="edit_course_id" name="course_id">
+                
+                <div class="modal-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="edit_course_name">Course / Faculty Name</label>
+                        <input class="gov-input" id="edit_course_name" name="course_name" type="text" required style="width:100%;">
+                        <span class="validation-error-msg" id="error_edit_course_name"></span>
+                    </div>
+
+                    <div class="gov-form-group">
+                        <label class="gov-label" for="edit_course_code">Course Code</label>
+                        <input class="gov-input" id="edit_course_code" name="course_code" type="text" style="width:100%;">
+                    </div>
+
+                    <div class="gov-form-group">
+                        <label class="gov-label" for="edit_course_duration">Duration</label>
+                        <input class="gov-input" id="edit_course_duration" name="course_duration" type="text" style="width:100%;">
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="edit_course_fee">Tuition Fee (£)</label>
+                        <input class="gov-input" id="edit_course_fee" name="course_fee" type="number" step="0.01" style="width:100%;">
+                        <span class="validation-error-msg" id="error_edit_course_fee"></span>
+                    </div>
+
+                    <div class="gov-form-group" style="grid-column: span 2;">
+                        <label class="gov-label" for="edit_course_description">Course Description</label>
+                        <textarea class="gov-input" id="edit_course_description" name="course_description" rows="3" style="width:100%; height: auto; min-height: 80px; resize: vertical; padding: 10px; font-family: inherit;"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-form-actions" style="margin-top: 25px;">
+                    <button type="button" class="gov-button gov-button-secondary" onclick="hideEditCourseModal()" style="border-radius:6px; padding: 10px 20px;">Cancel</button>
                     <button type="submit" class="gov-button" style="border-radius:6px; padding: 10px 24px;">Save Updates</button>
                 </div>
             </form>
@@ -1737,6 +2170,10 @@
 
         function showCreateModal() {
             clearModalErrors();
+            document.getElementById('c_street_address').value = '';
+            document.getElementById('c_city').value = '';
+            document.getElementById('c_country').value = '';
+            document.getElementById('c_zip_code').value = '';
             document.getElementById('createStudentModal').style.display = 'flex';
         }
         function hideCreateModal() {
@@ -1753,6 +2190,10 @@
             document.getElementById('e_whatsapp').value = studentData.whatsapp_number;
             document.getElementById('e_faculty').value = studentData.faculty_id || '';
             document.getElementById('e_rep').value = studentData.rep_code || '';
+            document.getElementById('e_street_address').value = studentData.street_address || '';
+            document.getElementById('e_city').value = studentData.city || '';
+            document.getElementById('e_country').value = studentData.country || '';
+            document.getElementById('e_zip_code').value = studentData.zip_code || '';
             document.getElementById('e_status').value = studentData.account_status;
 
             document.getElementById('editStudentModal').style.display = 'flex';
@@ -1850,8 +2291,23 @@
             var email = document.getElementById('c_email').value.trim();
             var whatsapp = document.getElementById('c_whatsapp').value.trim();
             var faculty = document.getElementById('c_faculty').value;
+            var street = document.getElementById('c_street_address').value.trim();
+            var city = document.getElementById('c_city').value.trim();
+            var country = document.getElementById('c_country').value;
             var hasError = false;
 
+            if (!street) {
+                showModalError('c_street_address', 'Street Address is required.');
+                hasError = true;
+            }
+            if (!city) {
+                showModalError('c_city', 'City is required.');
+                hasError = true;
+            }
+            if (!country) {
+                showModalError('c_country', 'Country selection is required.');
+                hasError = true;
+            }
             if (!name) {
                 showModalError('c_name', 'Full Name is required.');
                 hasError = true;
@@ -1886,8 +2342,23 @@
             var email = document.getElementById('e_email').value.trim();
             var whatsapp = document.getElementById('e_whatsapp').value.trim();
             var faculty = document.getElementById('e_faculty').value;
+            var street = document.getElementById('e_street_address').value.trim();
+            var city = document.getElementById('e_city').value.trim();
+            var country = document.getElementById('e_country').value;
             var hasError = false;
 
+            if (!street) {
+                showModalError('e_street_address', 'Street Address is required.');
+                hasError = true;
+            }
+            if (!city) {
+                showModalError('e_city', 'City is required.');
+                hasError = true;
+            }
+            if (!country) {
+                showModalError('e_country', 'Country selection is required.');
+                hasError = true;
+            }
             if (!name) {
                 showModalError('e_name', 'Full Name is required.');
                 hasError = true;
@@ -1914,7 +2385,77 @@
 
             return !hasError;
         }
+
+        // Course Modal Helpers
+        function showAddCourseModal() {
+            clearModalErrors();
+            document.getElementById('add_course_name').value = '';
+            document.getElementById('add_course_code').value = '';
+            document.getElementById('add_course_duration').value = '';
+            document.getElementById('add_course_fee').value = '';
+            document.getElementById('add_course_description').value = '';
+            document.getElementById('addCourseModal').style.display = 'flex';
+        }
+        function hideAddCourseModal() {
+            clearModalErrors();
+            document.getElementById('addCourseModal').style.display = 'none';
+        }
+
+        function showEditCourseModal(courseData) {
+            clearModalErrors();
+            document.getElementById('edit_course_id').value = courseData.id;
+            document.getElementById('edit_course_name').value = courseData.name;
+            document.getElementById('edit_course_code').value = courseData.code || '';
+            document.getElementById('edit_course_duration').value = courseData.duration || '';
+            document.getElementById('edit_course_fee').value = courseData.fee || '0.00';
+            document.getElementById('edit_course_description').value = courseData.description || '';
+            document.getElementById('editCourseModal').style.display = 'flex';
+        }
+        function hideEditCourseModal() {
+            clearModalErrors();
+            document.getElementById('editCourseModal').style.display = 'none';
+        }
+
+        function validateAddCourse() {
+            clearModalErrors();
+            var name = document.getElementById('add_course_name').value.trim();
+            var fee = document.getElementById('add_course_fee').value.trim();
+            var hasError = false;
+            if (!name) {
+                showModalError('add_course_name', 'Course Name is required.');
+                hasError = true;
+            }
+            if (fee && isNaN(fee)) {
+                showModalError('add_course_fee', 'Please enter a valid numeric fee.');
+                hasError = true;
+            }
+            return !hasError;
+        }
+
+        function validateEditCourse() {
+            clearModalErrors();
+            var name = document.getElementById('edit_course_name').value.trim();
+            var fee = document.getElementById('edit_course_fee').value.trim();
+            var hasError = false;
+            if (!name) {
+                showModalError('edit_course_name', 'Course Name is required.');
+                hasError = true;
+            }
+            if (fee && isNaN(fee)) {
+                showModalError('edit_course_fee', 'Please enter a valid numeric fee.');
+                hasError = true;
+            }
+            return !hasError;
+        }
     </script>
+
+    <!-- Floating WhatsApp Support Button -->
+    <a href="https://wa.me/447000000000" target="_blank" class="whatsapp-float-btn" aria-label="Chat with Support on WhatsApp">
+        <svg viewBox="0 0 24 24" class="whatsapp-icon" xmlns="http://www.w3.org/2000/svg">
+            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.456L0 24zm6.59-4.846c1.6.95 3.498 1.45 5.424 1.451 5.513 0 10.002-4.489 10.005-10.003.002-2.67-1.036-5.182-2.924-7.072-1.888-1.89-4.403-2.93-7.079-2.931-5.519 0-10.01 4.49-10.014 10.004-.002 1.933.504 3.82 1.465 5.433l-.963 3.52 3.606-.946zm11.517-7.234c-.303-.152-1.793-.884-2.071-.985-.278-.101-.48-.152-.682.152-.202.304-.783.985-.96 1.187-.178.203-.355.228-.658.076-1.218-.61-2.185-1.066-3.045-2.545-.228-.393.228-.364.65-.183.125.038.25.076.353.127.303.152.329.253.481.557.152.304.076.582-.038.81-.114.228-.682 1.088-.86 1.392-.177.304-.367.33-.67.177-1.23-.615-2.193-1.077-3.056-2.57-.23-.4-.015-.62.196-.827.19-.187.354-.354.48-.53.127-.178.189-.253.253-.405.064-.152.03-.304-.015-.405-.045-.101-.405-1.088-.557-1.443-.152-.354-.304-.304-.43-.304l-.38-.013c-.152-.002-.38.053-.582.253-.202.203-.783.76-1.063 1.342-.28.582-.81 1.747-.81 3.544 0 1.797 1.316 3.544 1.493 3.797.177.253 2.592 3.96 6.28 5.556.88.38 1.56.607 2.09.775.88.28 1.68.24 2.3.15.7-.1 2.07-.84 2.37-1.67.3-.83.3-1.545.21-1.696-.09-.15-.303-.228-.606-.38z"/>
+        </svg>
+        <span class="whatsapp-tooltip">Chat with Support</span>
+    </a>
 
 </body>
 </html>

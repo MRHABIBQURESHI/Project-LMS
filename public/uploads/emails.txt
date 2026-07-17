@@ -16,3 +16,11 @@ Sincerely,
 UK London International Award Board Assessor Services
 ========================================
 
+cPanel SMTP Connection Failure: Connection could not be established with host "ssl://mail.cpduk.london:465": stream_socket_client(): php_network_getaddresses: getaddrinfo for mail.cpduk.london failed: No such host is known.  (Falling back to Mailtrap API)
+Mailtrap Response Code: 200, Body: {"success":true,"message_ids":["5598817103"]}
+cPanel SMTP Connection Failure: Connection could not be established with host "ssl://mail.cpduk.london:465": stream_socket_client(): php_network_getaddresses: getaddrinfo for mail.cpduk.london failed: No such host is known.  (Falling back to Mailtrap API)
+Mailtrap Response Code: 200, Body: {"success":true,"message_ids":["5598826358"]}
+cPanel SMTP Connection Failure: Connection could not be established with host "ssl://mail.cpduk.london:465": stream_socket_client(): php_network_getaddresses: getaddrinfo for mail.cpduk.london failed: No such host is known.  (Falling back to Mailtrap API)
+Mailtrap Response Code: 200, Body: {"success":true,"message_ids":["5599062873"]}
+cPanel SMTP Connection Failure: Connection could not be established with host "ssl://mail.cpduk.london:465": stream_socket_client(): php_network_getaddresses: getaddrinfo for mail.cpduk.london failed: No such host is known.  (Falling back to Mailtrap API)
+Mailtrap Response Code: 200, Body: {"success":true,"message_ids":["5599096262"]}

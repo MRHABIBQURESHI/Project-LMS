@@ -64,13 +64,17 @@ class AuthService
         $dob = trim($data['dob'] ?? '');
         $emailInput = trim($data['email'] ?? '');
         $whatsappNumber = trim($data['whatsapp_number'] ?? '');
+        $streetAddress = trim($data['street_address'] ?? '');
+        $city = trim($data['city'] ?? '');
+        $country = trim($data['country'] ?? '');
+        $zipCode = trim($data['zip_code'] ?? '');
         $facultyId = intval($data['faculty_id'] ?? 0);
         $priorLearningLevel = trim($data['prior_learning_level'] ?? '');
         $repCode = trim($data['rep_code'] ?? '');
         $paymentChoice = trim($data['payment_choice'] ?? ''); // 'upfront', 'installment', 'cash'
 
-        if (empty($fullName) || empty($dob) || empty($emailInput) || empty($whatsappNumber) || empty($facultyId) || empty($priorLearningLevel) || empty($paymentChoice)) {
-            throw new Exception('Please fill in all the required registration fields including prior learning level.');
+        if (empty($fullName) || empty($dob) || empty($emailInput) || empty($whatsappNumber) || empty($streetAddress) || empty($city) || empty($country) || empty($facultyId) || empty($priorLearningLevel) || empty($paymentChoice)) {
+            throw new Exception('Please fill in all the required registration fields including prior learning level and full address (Street, City, and Country).');
         }
 
         $vaultDir = base_path('secure_vault');
@@ -169,8 +173,8 @@ class AuthService
             $pdo->beginTransaction();
 
             // Insert student user
-            $stmt = $pdo->prepare("INSERT INTO users (full_name, dob, email, whatsapp_number, password_hash, role, faculty_id, rep_code, id_document_path, prior_learning_level, prior_learning_doc_path, account_status) VALUES (?, ?, ?, ?, ?, 'student', ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$fullName, $dob, $emailInput, $whatsappNumber, $hash, $facultyId, $repCode ? $repCode : null, $idDocumentPath, $priorLearningLevel, $priorLearningDocPath, $status]);
+            $stmt = $pdo->prepare("INSERT INTO users (full_name, dob, email, whatsapp_number, street_address, city, country, zip_code, password_hash, role, faculty_id, rep_code, id_document_path, prior_learning_level, prior_learning_doc_path, account_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'student', ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$fullName, $dob, $emailInput, $whatsappNumber, $streetAddress, $city, $country, $zipCode ? $zipCode : null, $hash, $facultyId, $repCode ? $repCode : null, $idDocumentPath, $priorLearningLevel, $priorLearningDocPath, $status]);
             $userId = $pdo->lastInsertId();
 
             if ($paymentChoice === 'cash') {
